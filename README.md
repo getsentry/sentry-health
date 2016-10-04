@@ -1,19 +1,19 @@
 Start everything up:
 
-    docker-compose up -d zookeeper kafka redis
+    make upd
 
 Build the application images:
 
-    docker-compose build
+    make build
 
 Generate some data:
 
-    docker-compose run --rm application generator
+    make generator
 
 Record some data:
 
-    docker-compose run --rm application recorder
+    make recorder
 
 Tear everything down:
 
-    docker-compose down
+    make down

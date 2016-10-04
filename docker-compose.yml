@@ -16,11 +16,3 @@ services:
     hostname: redis
     ports:
       - '6380:6379'
-  application:
-    build: .
-    entrypoint: ['tervis']
-    volumes:
-      - ./tervis:/usr/src/app/tervis
-    links:
-      - kafka
-      - redis

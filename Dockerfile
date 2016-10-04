@@ -23,4 +23,4 @@ COPY . /usr/src/app
 
 RUN pip install -e .
 
-CMD ["tervis"]
+ENTRYPOINT ["tervis"]
