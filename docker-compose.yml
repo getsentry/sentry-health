@@ -1,0 +1,26 @@
+version: '2'
+
+services:
+  zookeeper:
+    image: confluent/zookeeper:3.4.6-cp1
+    hostname: zookeeper
+    ports:
+      - '2181:2181'
+  kafka:
+    image: confluent/kafka:0.10.0.0-cp1
+    hostname: kafka
+    links:
+      - zookeeper
+  redis:
+    image: redis:3.2.4
+    hostname: redis
+    ports:
+      - '6380:6379'
+  application:
+    build: .
+    entrypoint: ['tervis']
+    volumes:
+      - ./tervis:/usr/src/app/tervis
+    links:
+      - kafka
+      - redis

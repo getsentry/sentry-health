@@ -1,0 +1,3 @@
+kakfa:
+  common:
+    bootstrap.servers: kafka
