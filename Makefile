@@ -19,6 +19,9 @@ recorder:
 generator:
 	docker run $(DOCKER_RUN_OPTS) generator
 
+apiserver:
+	docker run -p 8001:8000 $(DOCKER_RUN_OPTS) apiserver
+
 shell:
 	docker run $(DOCKER_RUN_OPTS) shell
 

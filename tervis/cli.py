@@ -53,3 +53,13 @@ def shell(env):
     ctx['env'] = env
 
     code.interact(banner=banner, local=ctx)
+
+
+@cli.command()
+@click.option('--host')
+@click.option('--port', type=int)
+@pass_environment
+def apiserver(env, host, port):
+    """Runs the api server."""
+    from .apiserver import Server
+    Server(env).run(host=host, port=port)

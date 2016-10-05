@@ -17,6 +17,7 @@ setup(
         'PyYAML~=3.12',
         'confluent-kafka~=0.9',
         'redis~=2.10',
+        'aiohttp~=1.0.3',
     ],
     entry_points={
         'console_scripts': [

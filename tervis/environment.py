@@ -8,6 +8,13 @@ from .exceptions import ConfigError
 
 
 CONFIG_DEFAULTS = {
+    'apiserver': {
+        'port': 8000,
+        'host': '0.0.0.0',
+        'limits': {
+            'max_json_packet': 1024 * 64,
+        },
+    },
     'recorder': {
         'ttl': 60 * 60 * 24 * 7,
         'resolutions': [60, 60 * 60],
