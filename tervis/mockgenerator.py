@@ -8,6 +8,7 @@ import functools
 from collections import defaultdict
 
 from ._compat import text_type
+from .producer import Producer
 
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ class MockGenerator(object):
 
     def __init__(self, env, seed=None, epoch=None):
         self.env = env
-        self.producer = env.connector.get_kafka_producer()
+        self.producer = Producer(env)
 
         if epoch is None:
             epoch = time.time()
@@ -110,39 +111,6 @@ class MockGenerator(object):
         if count is not None:
             events = itertools.islice(events, count)
 
-        start = time.time()
-
-        i = 0
-        try:
+        with self.producer.guarded_section():
             for i, (timestamp, project, event) in enumerate(events, 1):
-                produce = functools.partial(
-                    self.producer.produce, 'events',
-                    json.dumps([project, event]).encode('utf-8'),
-                    key=text_type(project).encode('utf-8'))
-                try:
-                    produce()
-                except BufferError as e:
-                    logger.info(
-                        'Caught %r, waiting for %s events to be produced...',
-                        e,
-                        len(self.producer),
-                    )
-                    self.producer.flush()  # wait for buffer to empty
-                    logger.info('Done waiting, continue to generate events...')
-                    produce()
-
-                if i % 1000 == 0:
-                    logger.info('%s events produced, current timestamp is %s.',
-                                i, timestamp)
-        except KeyboardInterrupt:
-            logger.info(
-                'Waiting for producer to flush %s events before exiting...',
-                len(self.producer),
-            )
-
-        self.producer.flush()
-
-        stop = time.time()
-        duration = stop - start
-        logger.info('%s total events produced in %0.2f seconds '
-                    '(%0.2f events/sec.)', i, duration, (i / duration))
+                self.producer.produce_event(project, event, timestamp)
