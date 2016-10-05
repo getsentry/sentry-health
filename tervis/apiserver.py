@@ -6,6 +6,7 @@ from ipaddress import ip_address
 from aiohttp import web
 
 from .auth import AuthManager
+from .producer import Producer
 from .exceptions import ApiError, PayloadTooLarge, ClientReadFailed
 from ._compat import scalar_types, number_types, string_types
 
@@ -57,6 +58,7 @@ class Server(object):
     def __init__(self, env):
         self.env = env
         self.auth_manager = AuthManager(env)
+        self.producer = Producer(env)
         self.app = web.Application()
         self.app.router.add_route(
             method='POST',
@@ -80,7 +82,9 @@ class Server(object):
             raise ClientReadFailed(str(e))
 
     async def process_event(self, event, auth):
-        pass
+        with self.producer.partial_guard():
+            self.producer.produce_event(auth.project, event,
+                                        auth.timestamp)
 
     async def on_submit_event(self, request):
         auth = await self.auth_manager.auth_from_request(request)
@@ -106,5 +110,6 @@ class Server(object):
             host = self.env.get_config('apiserver.host')
         if port is None:
             port = self.env.get_config('apiserver.port')
-        web.run_app(self.app, host=host, port=port,
-                    print=lambda *a, **kw: None)
+        with self.producer:
+            web.run_app(self.app, host=host, port=port,
+                        print=lambda *a, **kw: None)

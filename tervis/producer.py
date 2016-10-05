@@ -17,23 +17,43 @@ class Producer(object):
         self.env = env
         self.producer = env.connector.get_kafka_producer()
         self.event_count = 0
+        self._depth = 0
 
     @contextmanager
-    def guarded_section(self):
+    def full_guard(self):
         start = time.time()
-        try:
-            yield self
-        except KeyboardInterrupt:
-            logger.info(
-                'Waiting for producer to flush %s events before exiting...',
-                len(self.producer),
-            )
-        self.producer.flush()
+        with self:
+            try:
+                yield
+            except KeyboardInterrupt:
+                pass
         stop = time.time()
         duration = stop - start
         i = self.event_count
         logger.info('%s total events produced in %0.2f seconds '
                     '(%0.2f events/sec.)', i, duration, (i / duration))
+
+    def flush(self):
+        logger.info(
+            'Waiting for producer to flush %s events...', len(self.producer))
+        self.producer.flush()
+
+    def __enter__(self):
+        self._depth += 1
+        return self
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self._depth -= 1
+        if self._depth == 0:
+            self.flush()
+
+    @contextmanager
+    def partial_guard(self):
+        try:
+            yield
+        finally:
+            if self.event_count % 1000 == 0:
+                self.flush()
 
     def produce_event(self, project, event, timestamp=None):
         produce = functools.partial(
