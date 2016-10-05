@@ -25,7 +25,7 @@ class Connector(object):
             return rv
         raise RuntimeError('Environment went away')
 
-    def get_consumer(self, topics=None):
+    def get_kafka_consumer(self, topics=None):
         rv = Consumer(self.env.get_consumer_config())
         if topics is None:
             return rv
@@ -37,7 +37,7 @@ class Connector(object):
         rv.subscribe(topics, on_assign=_handle_assignment)
         return rv
 
-    def get_producer(self):
+    def get_kafka_producer(self):
         return Producer(self.env.get_producer_config())
 
     def get_redis(self):

@@ -183,7 +183,7 @@ class Recorder(object):
         pipeline.execute()
 
     def run(self):
-        consumer = self.env.connector.get_consumer(topics=['events'])
+        consumer = self.env.connector.get_kafka_consumer(topics=['events'])
         with closing(consumer):
             consumer.subscribe(['events'])
             try:

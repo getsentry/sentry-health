@@ -92,7 +92,7 @@ class MockGenerator(object):
 
     def __init__(self, env, seed=None, epoch=None):
         self.env = env
-        self.producer = env.connector.get_producer()
+        self.producer = env.connector.get_kafka_producer()
 
         if epoch is None:
             epoch = time.time()

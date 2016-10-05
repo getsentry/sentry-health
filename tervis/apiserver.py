@@ -37,13 +37,14 @@ expect_object = partial(expect_type, ty=dict)
 
 def normalize_event(event):
     return {
-        'id': expect_scalar(event, 'id'),
         'ty': expect_string(event, 'ty'),
         'ts': expect_number(event, 'ts', convert=float),
         'ip': expect_type(event, 'ip', ty=string_types, validate=ip_address,
                           allow_none=True),
         'dt': expect_number(event, 'dt', allow_none=True),
         'dev': expect_object(event, 'dev', allow_none=True) or {},
+        'oid': expect_scalar(event, 'oid'),
+        'sid': expect_scalar(event, 'sid'),
         'env': expect_string(event, 'env', allow_none=True),
         'rel': expect_string(event, 'rel', allow_none=True),
         'user': expect_object(event, 'user', allow_none=True) or {},
