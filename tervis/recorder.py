@@ -109,9 +109,8 @@ class Recorder(object):
         # Batch together all of events by session.
         sessions = defaultdict(list)
         for message in messages:
-            items = self.load_message(message)
-            for project, event in items:
-                sessions[(project, event['sid'])].append(event)
+            project, event = self.load_message(message)
+            sessions[(project, event['sid'])].append(event)
 
         # Fetch the session state for all affected sessions.
         keys = list(sessions.keys())
