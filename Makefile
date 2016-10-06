@@ -25,4 +25,7 @@ apiserver:
 shell:
 	docker run $(DOCKER_RUN_OPTS) shell
 
+test:
+	py.test --tb=short tests -vv
+
 .PHONY: up upd down build recorder generator shell
