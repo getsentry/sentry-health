@@ -1,7 +1,7 @@
 import time
 
 from .exceptions import BadAuth
-from .dependencies import Dependency, Database
+from .depmgr import DependencyDescriptor
 
 
 def parse_auth_header(header):
@@ -47,8 +47,7 @@ class AuthInfo(object):
             raise BadAuth('Missing auth parameter "%s"' % e)
 
 
-class AuthManager(Dependency):
-    database = Database('auth')
+class AuthManager(DependencyDescriptor):
 
     def __init__(self, env):
         self.env = env

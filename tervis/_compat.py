@@ -1,4 +1,5 @@
 import sys
+import inspect
 
 
 PY2 = sys.version_info[0] == 2
@@ -12,6 +13,7 @@ if PY2:
     string_types = (str, unicode)
     int_types = (int, long)
     number_types = (float,) + int_types
+    isawaitable = lambda x: False
 
     def implements_to_string(x):
         x.__unicode__ = x.__str__
@@ -25,6 +27,7 @@ else:
     text_type = str
     string_types = (str,)
     int_types = (int,)
+    isawaitable = inspect.isawaitable
     implements_to_string = lambda x: x
 
 

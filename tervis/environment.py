@@ -55,7 +55,7 @@ def discover_config():
 
 
 class Environment(DependencyContainer):
-    __dependency_scope__ = 'env'
+    dependency_scope = 'env'
 
     def __init__(self, config=None):
         if config is None:

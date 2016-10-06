@@ -7,16 +7,16 @@ from contextlib import contextmanager
 
 from ._compat import text_type
 from .connectors import KafkaProducer
-from .depmgr import Dependency
+from .depmgr import DependencyDescriptor
 
 
 logger = logging.getLogger(__name__)
 
 
-class Producer(Dependency):
-    scope = 'env'
+class Producer(DependencyDescriptor):
+    dependency_scope = 'env'
 
-    def __resolve_dependency__(self, env):
+    def instanciate_dependency(self, env):
         return ProducerImpl(env)
 
 

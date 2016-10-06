@@ -4,20 +4,24 @@ from confluent_kafka import Consumer, Producer
 
 from redis import StrictRedis
 
-from .depmgr import Dependency
+from .depmgr import DependencyDescriptor
 
 
 consumer_logger = logging.getLogger(__name__ + '.consumer')
 producer_logger = logging.getLogger(__name__ + '.producer')
 
 
-class KafkaConsumer(Dependency):
-    scope = 'env'
+class KafkaConsumer(DependencyDescriptor):
+    dependency_scope = 'env'
 
     def __init__(self, topics=None):
         self.topics = topics
 
-    def __resolve_dependency__(self, env):
+    @property
+    def dependency_key(self):
+        return (tuple(self.dependency_key or ()),)
+
+    def instanciate_dependency(self, env):
         rv = Consumer(env.get_consumer_config())
         if self.topics is None:
             return rv
@@ -30,15 +34,15 @@ class KafkaConsumer(Dependency):
         return rv
 
 
-class KafkaProducer(Dependency):
-    scope = 'env'
+class KafkaProducer(DependencyDescriptor):
+    dependency_scope = 'env'
 
-    def __resolve_dependency__(self, env):
+    def instanciate_dependency(self, env):
         return Producer(env.get_producer_config())
 
 
-class Redis(Dependency):
-    scope = 'env'
+class Redis(DependencyDescriptor):
+    dependency_scope = 'env'
 
-    def __resolve_dependency__(self, env):
+    def instanciate_dependency(self, env):
         return StrictRedis(host='redis')
