@@ -90,10 +90,10 @@ def generate(random, timestamp):
 
 
 class MockGenerator(object):
+    producer = Producer()
 
     def __init__(self, env, seed=None, epoch=None):
         self.env = env
-        self.producer = Producer(env)
 
         if epoch is None:
             epoch = time.time()

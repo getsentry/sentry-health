@@ -2,9 +2,9 @@ import os
 import yaml
 
 from ._compat import text_type
-from .connector import Connector
 from .utils import merge, iter_segments
 from .exceptions import ConfigError
+from .depmgr import DependencyContainer
 
 
 CONFIG_DEFAULTS = {
@@ -14,6 +14,7 @@ CONFIG_DEFAULTS = {
         'limits': {
             'max_json_packet': 1024 * 64,
         },
+        'auth_db': 'default',
     },
     'recorder': {
         'ttl': 60 * 60 * 24 * 7,
@@ -28,6 +29,15 @@ CONFIG_DEFAULTS = {
                 'auto.offset.reset': 'earliest',
             },
         }
+    },
+    'databases': {
+        'default': {
+            'backend': 'postgres',
+            'database': 'sentry',
+            'host': '127.0.0.1',
+            'user': None,
+            'password': None,
+        },
     }
 }
 
@@ -44,13 +54,13 @@ def discover_config():
     return load_config(fn)
 
 
-class Environment(object):
+class Environment(DependencyContainer):
+    __dependency_scope__ = 'env'
 
     def __init__(self, config=None):
         if config is None:
             config = discover_config()
         self.config = merge(CONFIG_DEFAULTS, config)
-        self.connector = Connector(self)
 
     def get_config(self, *items):
         rv = self.config

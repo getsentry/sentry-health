@@ -30,3 +30,10 @@ else:
 
 number_types = (float,) + int_types
 scalar_types = string_types + int_types
+
+
+def with_metaclass(meta, *bases):
+    class metaclass(type):
+        def __new__(cls, name, this_bases, d):
+            return meta(name, bases, d)
+    return type.__new__(metaclass, 'temporary_class', (), {})

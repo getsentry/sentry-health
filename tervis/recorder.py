@@ -7,6 +7,8 @@ from contextlib import closing
 
 from confluent_kafka import KafkaError, TopicPartition
 
+from .connectors import KafkaConsumer, Redis
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +50,11 @@ def batch(consumer, func, size=10000, async=True):
 
 
 class Recorder(object):
+    redis = Redis()
+    consumer = KafkaConsumer(topics=['events'])
 
     def __init__(self, env):
         self.env = env
-        self.redis = env.connector.get_redis()
         self.ttl = self.env.get_config('recorder.ttl')
         self.resolutions = self.env.get_config('recorder.resolutions')
         self.batch_size = self.env.get_config('recorder.batch_size')
@@ -183,11 +186,9 @@ class Recorder(object):
         pipeline.execute()
 
     def run(self):
-        consumer = self.env.connector.get_kafka_consumer(topics=['events'])
-        with closing(consumer):
-            consumer.subscribe(['events'])
+        with closing(self.consumer):
             try:
-                batch(consumer, self.process, size=self.batch_size,
+                batch(self.consumer, self.process, size=self.batch_size,
                       async=False)
             except KeyboardInterrupt:
                 pass

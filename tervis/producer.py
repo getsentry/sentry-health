@@ -6,16 +6,25 @@ import functools
 from contextlib import contextmanager
 
 from ._compat import text_type
+from .connectors import KafkaProducer
+from .depmgr import Dependency
 
 
 logger = logging.getLogger(__name__)
 
 
-class Producer(object):
+class Producer(Dependency):
+    scope = 'env'
+
+    def __resolve_dependency__(self, env):
+        return ProducerImpl(env)
+
+
+class ProducerImpl(object):
+    producer = KafkaProducer()
 
     def __init__(self, env):
         self.env = env
-        self.producer = env.connector.get_kafka_producer()
         self.event_count = 0
         self._depth = 0
 
