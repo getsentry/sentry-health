@@ -15,6 +15,7 @@ ENV CPLUS_INCLUDE_PATH /usr/local/include
 ENV LIBRARY_PATH /usr/local/lib
 ENV LD_LIBRARY_PATH /usr/local/lib
 ENV TERVIS_CONFIG /usr/src/app/dev-config.yml
+ENV PYTHONDONTWRITEBYTECODE 1
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
