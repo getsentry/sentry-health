@@ -62,7 +62,7 @@ class Server(object):
         self.app = web.Application()
         self.app.router.add_route(
             method='POST',
-            path='/events',
+            path='/events/{project}',
             handler=self.on_submit_event,
             name='submit_event'
         )
@@ -87,7 +87,8 @@ class Server(object):
                                         auth.timestamp)
 
     async def on_submit_event(self, request):
-        auth = await self.auth_manager.auth_from_request(request)
+        project = request.match_info['project']
+        auth = await self.auth_manager.auth_from_request(request, project)
         errors = []
         events = 0
         while 1:
