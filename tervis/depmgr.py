@@ -26,14 +26,25 @@ class DependencyContainerType(type):
         return rv
 
 
-def close_and_collect(dependency_container):
-    waitables = []
-    for instance in itervalues(dependency_container.__dependency_instances__):
-        if hasattr(instance, 'close'):
-            rv = instance.close()
-            if isawaitable(rv):
-                waitables.append(rv)
-    return waitables
+if PY2:
+    def close_and_collect(dependency_container):
+        for inst in itervalues(dependency_container.__dependency_instances__):
+            inst.close()
+
+else:
+    exec('''if 1:
+        def close_and_collect(dependency_container):
+            waitables = []
+            for inst in itervalues(dependency_container.__dependency_instances__):
+                if hasattr(inst, 'close'):
+                    rv = inst.close()
+                    if isawaitable(rv):
+                        waitables.append(rv)
+            if waitables:
+                async def _wait_and_discard():
+                    await asyncio.wait(waitables)
+                return _wait_and_discard()
+    ''')
 
 
 class DependencyContainer(with_metaclass(DependencyContainerType)):
@@ -44,22 +55,20 @@ class DependencyContainer(with_metaclass(DependencyContainerType)):
 
     def __exit__(self, exc_type, exc_value, tb):
         wait_for = close_and_collect(self)
-        if wait_for:
-            raise RuntimeError('Attempted sync context management but '
-                               'contained objects returned awaitable '
-                               'results on close (%r)' % wait_for)
+        if wait_for is not None:
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(wait_for)
 
     # If we are on Py 3 we support async close methods.
     if not PY2:
         exec('''if 1:
-            def __aenter__(self):
+            async def __aenter__(self):
                 return self
 
-            def __aexit__(self, exc_type, exc_value, tb):
+            async def __aexit__(self, exc_type, exc_value, tb):
                 wait_for = close_and_collect(self)
-                async def _wait_and_discard():
-                    await asyncio.wait(wait_for)
-                return _wait_and_discard()
+                if wait_for is not None:
+                    await wait_for
         ''')
 
 
