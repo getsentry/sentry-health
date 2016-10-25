@@ -1,10 +1,11 @@
-from tervis.depmgr import DependencyDescriptor
+from tervis.depmgr import DependencyDescriptor, DependencyMount
+from tervis.environment import CurrentEnvironment
 
 
 class MyDependency(DependencyDescriptor):
-    dependency_scope = 'env'
+    scope = 'env'
 
-    def instanciate_dependency(self, env):
+    def instanciate(self, env):
         return MyStuff(env)
 
 
@@ -18,17 +19,19 @@ class MyStuff(object):
         self.closed = True
 
 
-class DemoObject(object):
+class DemoObject(DependencyMount):
+    env = CurrentEnvironment()
     stuff = MyDependency()
 
     def __init__(self, env):
-        self.env = env
+        DependencyMount.__init__(self, parent=env)
 
 
 def test_depmgr(env):
     with env:
         obj = DemoObject(env)
         assert not obj.stuff.closed
-    assert len(env.__dependency_instances__) == 1
-    assert next(iter(env.__dependency_instances__.values())) is obj.stuff
+    instances = list(env.__dependency_info__.iter_instances())
+    assert len(instances) == 1
+    assert instances[0] is obj.stuff
     assert obj.stuff.closed

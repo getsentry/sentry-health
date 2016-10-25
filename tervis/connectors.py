@@ -12,16 +12,16 @@ producer_logger = logging.getLogger(__name__ + '.producer')
 
 
 class KafkaConsumer(DependencyDescriptor):
-    dependency_scope = 'env'
+    scope = 'env'
 
     def __init__(self, topics=None):
         self.topics = topics
 
     @property
-    def dependency_key(self):
+    def key(self):
         return (tuple(self.dependency_key or ()),)
 
-    def instanciate_dependency(self, env):
+    def instanciate(self, env):
         rv = Consumer(env.get_consumer_config())
         if self.topics is None:
             return rv
@@ -35,14 +35,14 @@ class KafkaConsumer(DependencyDescriptor):
 
 
 class KafkaProducer(DependencyDescriptor):
-    dependency_scope = 'env'
+    scope = 'env'
 
-    def instanciate_dependency(self, env):
+    def instanciate(self, env):
         return Producer(env.get_producer_config())
 
 
 class Redis(DependencyDescriptor):
-    dependency_scope = 'env'
+    scope = 'env'
 
-    def instanciate_dependency(self, env):
+    def instanciate(self, env):
         return StrictRedis(host='redis')

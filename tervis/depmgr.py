@@ -1,5 +1,6 @@
 import inspect
-from ._compat import with_metaclass, itervalues, isawaitable, PY2
+from weakref import ref as weakref
+from ._compat import iteritems, isawaitable, PY2
 
 if not PY2:
     import asyncio
@@ -8,34 +9,19 @@ if not PY2:
 containers = {}
 
 
-class DependencyContainerType(type):
-
-    def __new__(cls, name, bases, d):
-        dependency_scope = d.get('dependency_scope')
-        rv = type.__new__(cls, name, bases, d)
-        if dependency_scope is not None:
-            if dependency_scope in containers:
-                raise TypeError('Duplicated scope dependency_key %r' %
-                                dependency_scope)
-            containers[dependency_scope] = rv
-        return rv
-
-    def __call__(cls, *args, **kwargs):
-        rv = type.__call__(cls, *args, **kwargs)
-        rv.__dependency_instances__ = {}
-        return rv
-
-
 if PY2:
-    def close_and_collect(dependency_container):
-        for inst in itervalues(dependency_container.__dependency_instances__):
-            inst.close()
+    def close_and_collect(dependency_mount):
+        info = dependency_mount.__dependency_info__
+        for inst in info.iter_instances():
+            if hasattr(inst, 'close'):
+                inst.close()
 
 else:
     exec('''if 1:
-        def close_and_collect(dependency_container):
+        def close_and_collect(dependency_mount):
+            info = dependency_mount.__dependency_info__
             waitables = []
-            for inst in itervalues(dependency_container.__dependency_instances__):
+            for inst in info.iter_instances():
                 if hasattr(inst, 'close'):
                     rv = inst.close()
                     if isawaitable(rv):
@@ -47,8 +33,67 @@ else:
     ''')
 
 
-class DependencyContainer(with_metaclass(DependencyContainerType)):
-    dependency_scope = None
+class MountInfo(object):
+    __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
+                 'descriptor_type')
+
+    def __init__(self, ref, parent, scope, key=None, descriptor_type=None):
+        self._ref = weakref(ref)
+        if parent is not None:
+            parent = parent.__dependency_info__
+        self.parent = parent
+        self.scope = scope
+        self.instances = {}
+        self.key = key
+        self.descriptor_type = descriptor_type
+
+    @property
+    def ref(self):
+        rv = self._ref()
+        if rv is None:
+            raise RuntimeError('Self reference was garbage collected')
+        return rv
+
+    def iter_instances(self):
+        self_cls = self.ref.__class__
+        for key, value in iteritems(self.instances):
+            if isinstance(value, weakref):
+                value = value()
+            if value is not None:
+                yield value
+
+    def resolve_dependency(self, scope, key, descriptor_type):
+        if self.key == key and self.descriptor_type is descriptor_type:
+            return self.ref
+
+        full_key = descriptor_type, key
+        rv = self.instances.get(full_key)
+        if rv is not None:
+            if isinstance(rv, weakref):
+                rv = rv()
+            if rv is not None:
+                return rv
+
+        # Do not move past the given scope.
+        if scope == self.scope:
+            return
+
+        if self.parent is not None:
+            return self.parent.resolve_dependency(scope, key, descriptor_type)
+
+    def find_scope(self, scope):
+        if self.scope == scope:
+            return self
+        if self.parent is not None:
+            return self.parent.find_scope(scope)
+
+
+class DependencyMount(object):
+
+    def __init__(self, parent=None, scope=None, key=None,
+                 descriptor_type=None):
+        self.__dependency_info__ = MountInfo(self, parent, scope,
+                                             key, descriptor_type)
 
     def __enter__(self):
         return self
@@ -73,40 +118,33 @@ class DependencyContainer(with_metaclass(DependencyContainerType)):
 
 
 class DependencyDescriptor(object):
-    dependency_scope = 'env'
-    dependency_key = None
+    scope = 'env'
+    key = None
 
     def __get__(self, obj, type=None):
         if obj is None:
             return self
         return resolve_or_ensure_dependency(self, obj)
 
-    def instanciate_dependency(self, obj):
-        raise RuntimeError('Not implemented')
+    def instanciate(self, obj):
+        raise RuntimeError('Cannot instanciate %r objects' %
+                           self.__class__.__name__)
 
 
-def resolve_or_ensure_dependency(dep, owner):
-    expected_class = containers.get(dep.dependency_scope)
-    if expected_class is None:
-        raise RuntimeError('Unknown dependency_scope \'%s\'' %
-                           dep.dependency_scope)
+def resolve_or_ensure_dependency(descr, owner):
+    if not isinstance(owner, DependencyMount):
+        raise RuntimeError('Dependencies can only be mounted on a '
+                           'dependency mount')
+    info = owner.__dependency_info__
+    rv = info.resolve_dependency(descr.scope, descr.key, descr.__class__)
+    if rv is not None:
+        return rv
 
-    if not isinstance(owner, expected_class):
-        rv = getattr(owner, dep.dependency_scope, None)
-        if rv is not None and isinstance(rv, expected_class):
-            owner = rv
-        else:
-            resolver = getattr(owner, '__resolve_dependency_scope__', None)
-            if resolver is not None:
-                owner = resolver(dependency_scope)
-            else:
-                raise RuntimeError('Cannot resolve \'%s\' from %r' %
-                                   (dep.dependency_scope, owner))
+    scope_obj = info.find_scope(descr.scope)
+    if scope_obj is None:
+        raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
 
-    dependency_key = dep.__class__, dep.dependency_key
-
-    instance = owner.__dependency_instances__.get(dependency_key)
-    if instance is None:
-        instance = dep.instanciate_dependency(owner)
-        owner.__dependency_instances__[dependency_key] = instance
-    return instance
+    rv = descr.instanciate(scope_obj.ref)
+    full_key = descr.__class__, descr.key
+    scope_obj.instances[full_key] = rv
+    return rv

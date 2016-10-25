@@ -4,7 +4,7 @@ import yaml
 from ._compat import text_type
 from .utils import merge, iter_segments
 from .exceptions import ConfigError
-from .depmgr import DependencyContainer
+from .depmgr import DependencyMount, DependencyDescriptor
 
 
 CONFIG_DEFAULTS = {
@@ -54,10 +54,17 @@ def discover_config():
     return load_config(fn)
 
 
-class Environment(DependencyContainer):
-    dependency_scope = 'env'
+class CurrentEnvironment(DependencyDescriptor):
+    pass
+
+
+class Environment(DependencyMount):
 
     def __init__(self, config=None):
+        DependencyMount.__init__(self,
+            scope='env',
+            descriptor_type=CurrentEnvironment
+        )
         if config is None:
             config = discover_config()
         self.config = merge(CONFIG_DEFAULTS, config)
