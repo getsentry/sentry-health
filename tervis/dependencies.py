@@ -9,30 +9,6 @@ if not PY2:
 containers = {}
 
 
-if PY2:
-    def close_and_collect(dependency_mount):
-        info = dependency_mount.__dependency_info__
-        for inst in info.iter_instances():
-            if hasattr(inst, 'close'):
-                inst.close()
-
-else:
-    exec('''if 1:
-        def close_and_collect(dependency_mount):
-            info = dependency_mount.__dependency_info__
-            waitables = []
-            for inst in info.iter_instances():
-                if hasattr(inst, 'close'):
-                    rv = inst.close()
-                    if isawaitable(rv):
-                        waitables.append(rv)
-            if waitables:
-                async def _wait_and_discard():
-                    await asyncio.wait(waitables)
-                return _wait_and_discard()
-    ''')
-
-
 class MountInfo(object):
     __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
                  'descriptor_type', 'active', 'closed')
@@ -55,6 +31,34 @@ class MountInfo(object):
         if rv is None:
             raise RuntimeError('Self reference was garbage collected')
         return rv
+
+    if PY2:
+        def close_and_collect(self):
+            if self.closed:
+                return
+            for inst in self.iter_instances():
+                if hasattr(inst, 'close'):
+                    inst.close()
+            self.closed = True
+
+    else:
+        exec('''if 1:
+            def close_and_collect(self):
+                if self.closed:
+                    return
+                waitables = []
+                for inst in self.iter_instances():
+                    if hasattr(inst, 'close'):
+                        rv = inst.close()
+                        if isawaitable(rv):
+                            waitables.append(rv)
+
+                self.closed = True
+                if waitables:
+                    async def _wait_and_discard():
+                        await asyncio.wait(waitables)
+                    return _wait_and_discard()
+        ''')
 
     def iter_instances(self):
         self_cls = self.ref.__class__
@@ -98,13 +102,7 @@ class DependencyMount(object):
                                              key, descriptor_type)
 
     def close(self):
-        info = self.__dependency_info__
-        if info.closed:
-            return
-        try:
-            return close_and_collect(self)
-        finally:
-            info.closed = True
+        self.__dependency_info__.close_and_collect()
 
     def __enter__(self):
         self.__dependency_info__.active += 1
@@ -122,7 +120,7 @@ class DependencyMount(object):
     if not PY2:
         exec('''if 1:
             async def __aenter__(self):
-                return self.__enter__(self)
+                return self.__enter__()
 
             async def __aexit__(self, exc_type, exc_value, tb):
                 self.__dependency_info__.active -= 1
