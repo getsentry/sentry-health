@@ -1,7 +1,7 @@
 import time
 
 from .exceptions import BadAuth
-from .depmgr import DependencyDescriptor
+from .dependencies import DependencyDescriptor
 
 
 def parse_auth_header(header):

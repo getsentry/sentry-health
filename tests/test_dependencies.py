@@ -1,4 +1,4 @@
-from tervis.depmgr import DependencyDescriptor, DependencyMount
+from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.environment import CurrentEnvironment
 
 
@@ -27,7 +27,7 @@ class DemoObject(DependencyMount):
         DependencyMount.__init__(self, parent=env)
 
 
-def test_depmgr(env):
+def test_basic(env):
     with env:
         with DemoObject(env) as obj:
             assert not obj.stuff.closed

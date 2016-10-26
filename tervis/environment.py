@@ -4,7 +4,7 @@ import yaml
 from ._compat import text_type
 from .utils import merge, iter_segments
 from .exceptions import ConfigError
-from .depmgr import DependencyMount, DependencyDescriptor
+from .dependencies import DependencyMount, DependencyDescriptor
 
 
 CONFIG_DEFAULTS = {

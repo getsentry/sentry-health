@@ -4,7 +4,7 @@ from confluent_kafka import Consumer, Producer
 
 from redis import StrictRedis
 
-from .depmgr import DependencyDescriptor
+from .dependencies import DependencyDescriptor
 
 
 consumer_logger = logging.getLogger(__name__ + '.consumer')

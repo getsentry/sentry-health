@@ -7,7 +7,7 @@ from contextlib import contextmanager
 
 from ._compat import text_type
 from .connectors import KafkaProducer
-from .depmgr import DependencyDescriptor
+from .dependencies import DependencyDescriptor
 
 
 logger = logging.getLogger(__name__)

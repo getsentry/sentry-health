@@ -9,7 +9,7 @@ from .auth import Auth
 from .producer import Producer
 from .exceptions import ApiError, PayloadTooLarge, ClientReadFailed
 from .operation import CurrentOperation, Operation
-from .depmgr import DependencyDescriptor, DependencyMount
+from .dependencies import DependencyDescriptor, DependencyMount
 from ._compat import scalar_types, number_types, string_types
 
 

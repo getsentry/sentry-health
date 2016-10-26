@@ -1,4 +1,4 @@
-from .depmgr import DependencyMount, DependencyDescriptor
+from .dependencies import DependencyMount, DependencyDescriptor
 from .environment import CurrentEnvironment
 
 

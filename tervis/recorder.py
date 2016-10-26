@@ -8,7 +8,7 @@ from contextlib import closing
 from confluent_kafka import KafkaError, TopicPartition
 
 from .connectors import KafkaConsumer, Redis
-from .depmgr import DependencyMount
+from .dependencies import DependencyMount
 from .environment import CurrentEnvironment
 
 
