@@ -45,5 +45,5 @@ def iter_modules(path):
         modname = basename + modname
         yield modname
         if ispkg:
-            for item in iter_modules(modname, include_packages, True):
+            for item in iter_modules(modname):
                 yield item
