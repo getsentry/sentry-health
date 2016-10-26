@@ -35,7 +35,7 @@ else:
 
 class MountInfo(object):
     __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
-                 'descriptor_type', 'guard', 'closed')
+                 'descriptor_type', 'active', 'closed')
 
     def __init__(self, ref, parent, scope, key=None, descriptor_type=None):
         self._ref = weakref(ref)
@@ -46,7 +46,7 @@ class MountInfo(object):
         self.instances = {}
         self.key = key
         self.descriptor_type = descriptor_type
-        self.guard = 0
+        self.active = 0
         self.closed = False
 
     @property
@@ -107,12 +107,12 @@ class DependencyMount(object):
             info.closed = True
 
     def __enter__(self):
-        self.__dependency_info__.guard += 1
+        self.__dependency_info__.active += 1
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self.__dependency_info__.guard -= 1
-        if self.__dependency_info__.guard == 0:
+        self.__dependency_info__.active -= 1
+        if self.__dependency_info__.active == 0:
             wait_for = self.close()
             if wait_for is not None:
                 loop = asyncio.get_event_loop()
@@ -125,8 +125,8 @@ class DependencyMount(object):
                 return self.__enter__(self)
 
             async def __aexit__(self, exc_type, exc_value, tb):
-                self.__dependency_info__.guard -= 1
-                if self.__dependency_info__.guard == 0:
+                self.__dependency_info__.active -= 1
+                if self.__dependency_info__.active == 0:
                     wait_for = self.close()
                     if wait_for is not None:
                         await wait_for
@@ -134,6 +134,16 @@ class DependencyMount(object):
 
 
 class DependencyDescriptor(object):
+    """A dependency descriptor is a descriptor that will instanciate an
+    object if it does not exist yet.  That object can be anything really
+    but there are two special rules about it:
+
+    *   if that object is a `DependencyMount` it will automatically be
+        activated.  The use of the `with` statement is in that case not
+        necessary.
+    *   if the returned object has a `close()` method it will be invoked
+        when the owner is shut down.
+    """
     scope = 'env'
     key = None
 
@@ -148,20 +158,26 @@ class DependencyDescriptor(object):
 
 
 def resolve_or_ensure_dependency(descr, owner):
+    """Given a descriptor and an owner object this attempts to resolve an
+    already existing instance that matches the descriptor and return it,
+    or alternatively create a new instance and persist it with the matching
+    scope if such a scope exists.
+    """
     if isinstance(owner, DependencyDescriptor):
         raise RuntimeError('Dependencies cannot be mounted on dependency '
                            'descriptors.')
     elif not isinstance(owner, DependencyMount):
         raise RuntimeError('Dependencies can only be mounted on a '
                            'dependency mount')
+
     info = owner.__dependency_info__
     rv = info.resolve_dependency(descr.scope, descr.key, descr.__class__)
     if rv is not None:
         return rv
 
-    if info.guard == 0:
+    if info.active == 0:
         raise RuntimeError('Attempted to resolve dependency but the '
-                           'owner object (%r) is not guarded. Use a '
+                           'owner object (%r) is not active. Use a '
                            'with block.' % owner.__class__.__name__)
 
     scope_obj = info.find_scope(descr.scope)
@@ -170,10 +186,10 @@ def resolve_or_ensure_dependency(descr, owner):
 
     rv = descr.instanciate(scope_obj.ref)
 
-    # If we are producing a dependency mount we can safely guard it.  The
+    # If we are producing a dependency mount we can safely active it.  The
     # system will automatically invoke close() on teardown
     if isinstance(rv, DependencyMount):
-        rv.__dependency_info__.guard += 1
+        rv.__dependency_info__.active += 1
 
     full_key = descr.__class__, descr.key
     scope_obj.instances[full_key] = rv
