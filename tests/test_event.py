@@ -21,3 +21,23 @@ def test_basic_validation():
         'ty': 'basic',
         'user': {}
     }
+
+
+def test_ip_validation():
+    evt = normalize_event({
+        'ty': 'basic',
+        'ip': '127.0.0.1',
+        'ts': 42.0,
+        'oid': 13,
+        'sid': 13,
+    })
+    assert evt['ip'] == '127.0.0.1'
+
+    evt = normalize_event({
+        'ty': 'basic',
+        'ip': '0::1',
+        'ts': 42.0,
+        'oid': 13,
+        'sid': 13,
+    })
+    assert evt['ip'] == '::1'

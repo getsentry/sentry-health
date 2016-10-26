@@ -34,7 +34,8 @@ def normalize_event(event):
     return {
         'ty': expect_string(event, 'ty'),
         'ts': expect_number(event, 'ts', convert=float),
-        'ip': expect_type(event, 'ip', ty=string_types, validate=ip_address,
+        'ip': expect_type(event, 'ip', ty=string_types,
+                          convert=lambda x: str(ip_address(x)),
                           allow_none=True),
         'dt': expect_number(event, 'dt', allow_none=True),
         'dev': expect_object(event, 'dev', allow_none=True) or {},
