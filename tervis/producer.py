@@ -7,7 +7,8 @@ from contextlib import contextmanager
 
 from ._compat import text_type
 from .connectors import KafkaProducer
-from .dependencies import DependencyDescriptor
+from .dependencies import DependencyDescriptor, DependencyMount
+from .environment import CurrentEnvironment
 
 
 logger = logging.getLogger(__name__)
@@ -20,11 +21,12 @@ class Producer(DependencyDescriptor):
         return ProducerImpl(env)
 
 
-class ProducerImpl(object):
+class ProducerImpl(DependencyMount):
     producer = KafkaProducer()
+    env = CurrentEnvironment()
 
     def __init__(self, env):
-        self.env = env
+        DependencyMount.__init__(self, parent=env)
         self.event_count = 0
         self._depth = 0
 

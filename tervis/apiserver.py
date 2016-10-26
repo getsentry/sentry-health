@@ -8,6 +8,7 @@ from .event import normalize_event
 from .producer import Producer
 from .exceptions import ApiError, PayloadTooLarge, ClientReadFailed
 from .operation import CurrentOperation, Operation
+from .environment import CurrentEnvironment
 from .dependencies import DependencyDescriptor, DependencyMount
 
 
@@ -74,12 +75,12 @@ class SubmitEventEndpoint(Endpoint):
         }))
 
 
-class Server(object):
+class Server(DependencyMount):
+    env = CurrentEnvironment()
+    producer = Producer()
 
     def __init__(self, env):
-        self.env = env
-        self.auth_manager = AuthManager(env)
-        self.producer = Producer(env)
+        DependencyMount.__init__(self, parent=env)
         self.app = web.Application()
 
         self.app.router.add_route(

@@ -62,4 +62,5 @@ def shell(env):
 def apiserver(env, host, port):
     """Runs the api server."""
     from .apiserver import Server
-    Server(env).run(host=host, port=port)
+    with Server(env) as server:
+        server.run(host=host, port=port)
