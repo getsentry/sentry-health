@@ -19,7 +19,7 @@ class KafkaConsumer(DependencyDescriptor):
 
     @property
     def key(self):
-        return (tuple(self.dependency_key or ()),)
+        return tuple(self.topics or ())
 
     def instanciate(self, env):
         rv = Consumer(env.get_consumer_config())

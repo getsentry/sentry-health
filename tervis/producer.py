@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class Producer(DependencyDescriptor):
-    dependency_scope = 'env'
+    scope = 'env'
 
-    def instanciate_dependency(self, env):
+    def instanciate(self, env):
         return ProducerImpl(env)
 
 

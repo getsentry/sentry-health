@@ -8,6 +8,8 @@ from contextlib import closing
 from confluent_kafka import KafkaError, TopicPartition
 
 from .connectors import KafkaConsumer, Redis
+from .depmgr import DependencyMount
+from .environment import CurrentEnvironment
 
 
 logger = logging.getLogger(__name__)
@@ -49,12 +51,13 @@ def batch(consumer, func, size=10000, async=True):
         messages = []
 
 
-class Recorder(object):
+class Recorder(DependencyMount):
     redis = Redis()
+    env = CurrentEnvironment()
     consumer = KafkaConsumer(topics=['events'])
 
     def __init__(self, env):
-        self.env = env
+        DependencyMount.__init__(self, parent=env)
         self.ttl = self.env.get_config('recorder.ttl')
         self.resolutions = self.env.get_config('recorder.resolutions')
         self.batch_size = self.env.get_config('recorder.batch_size')
