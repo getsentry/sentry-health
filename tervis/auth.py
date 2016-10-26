@@ -47,11 +47,9 @@ class AuthInfo(object):
             raise BadAuth('Missing auth parameter "%s"' % e)
 
 
-class AuthManager(DependencyDescriptor):
+class Auth(DependencyDescriptor):
+    scope = 'operation'
 
-    def __init__(self, env):
-        self.env = env
-
-    async def auth_from_request(self, request, project):
-        header = request.headers.get('x-sentry-auth')
-        return AuthInfo.from_header(header, project)
+    def instanciate(self, op):
+        header = op.req.headers.get('x-sentry-auth')
+        return AuthInfo.from_header(header, op.project)

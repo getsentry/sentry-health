@@ -35,7 +35,7 @@ else:
 
 class MountInfo(object):
     __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
-                 'descriptor_type')
+                 'descriptor_type', 'guard')
 
     def __init__(self, ref, parent, scope, key=None, descriptor_type=None):
         self._ref = weakref(ref)
@@ -46,6 +46,7 @@ class MountInfo(object):
         self.instances = {}
         self.key = key
         self.descriptor_type = descriptor_type
+        self.guard = 0
 
     @property
     def ref(self):
@@ -96,24 +97,29 @@ class DependencyMount(object):
                                              key, descriptor_type)
 
     def __enter__(self):
+        self.__dependency_info__.guard += 1
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        wait_for = close_and_collect(self)
-        if wait_for is not None:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(wait_for)
+        self.__dependency_info__.guard -= 1
+        if self.__dependency_info__.guard == 0:
+            wait_for = close_and_collect(self)
+            if wait_for is not None:
+                loop = asyncio.get_event_loop()
+                loop.run_until_complete(wait_for)
 
     # If we are on Py 3 we support async close methods.
     if not PY2:
         exec('''if 1:
             async def __aenter__(self):
-                return self
+                return self.__enter__(self)
 
             async def __aexit__(self, exc_type, exc_value, tb):
-                wait_for = close_and_collect(self)
-                if wait_for is not None:
-                    await wait_for
+                self.__dependency_info__.guard -= 1
+                if self.__dependency_info__.guard == 0:
+                    wait_for = close_and_collect(self)
+                    if wait_for is not None:
+                        await wait_for
         ''')
 
 
@@ -132,13 +138,21 @@ class DependencyDescriptor(object):
 
 
 def resolve_or_ensure_dependency(descr, owner):
-    if not isinstance(owner, DependencyMount):
+    if isinstance(owner, DependencyDescriptor):
+        raise RuntimeError('Dependencies cannot be mounted on dependency '
+                           'descriptors.')
+    elif not isinstance(owner, DependencyMount):
         raise RuntimeError('Dependencies can only be mounted on a '
                            'dependency mount')
     info = owner.__dependency_info__
     rv = info.resolve_dependency(descr.scope, descr.key, descr.__class__)
     if rv is not None:
         return rv
+
+    if info.guard == 0:
+        raise RuntimeError('Attempted to resolve dependency but the '
+                           'owner object (%r) is not guarded. Use a '
+                           'with block.' % owner.__class__.__name__)
 
     scope_obj = info.find_scope(descr.scope)
     if scope_obj is None:
