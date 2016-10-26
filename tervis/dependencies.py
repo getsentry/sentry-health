@@ -35,7 +35,7 @@ else:
 
 class MountInfo(object):
     __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
-                 'descriptor_type', 'guard')
+                 'descriptor_type', 'guard', 'closed')
 
     def __init__(self, ref, parent, scope, key=None, descriptor_type=None):
         self._ref = weakref(ref)
@@ -47,6 +47,7 @@ class MountInfo(object):
         self.key = key
         self.descriptor_type = descriptor_type
         self.guard = 0
+        self.closed = False
 
     @property
     def ref(self):
@@ -96,6 +97,15 @@ class DependencyMount(object):
         self.__dependency_info__ = MountInfo(self, parent, scope,
                                              key, descriptor_type)
 
+    def close(self):
+        info = self.__dependency_info__
+        if info.closed:
+            return
+        try:
+            return close_and_collect(self)
+        finally:
+            info.closed = True
+
     def __enter__(self):
         self.__dependency_info__.guard += 1
         return self
@@ -103,7 +113,7 @@ class DependencyMount(object):
     def __exit__(self, exc_type, exc_value, tb):
         self.__dependency_info__.guard -= 1
         if self.__dependency_info__.guard == 0:
-            wait_for = close_and_collect(self)
+            wait_for = self.close()
             if wait_for is not None:
                 loop = asyncio.get_event_loop()
                 loop.run_until_complete(wait_for)
@@ -117,7 +127,7 @@ class DependencyMount(object):
             async def __aexit__(self, exc_type, exc_value, tb):
                 self.__dependency_info__.guard -= 1
                 if self.__dependency_info__.guard == 0:
-                    wait_for = close_and_collect(self)
+                    wait_for = self.close()
                     if wait_for is not None:
                         await wait_for
         ''')
@@ -159,6 +169,12 @@ def resolve_or_ensure_dependency(descr, owner):
         raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
 
     rv = descr.instanciate(scope_obj.ref)
+
+    # If we are producing a dependency mount we can safely guard it.  The
+    # system will automatically invoke close() on teardown
+    if isinstance(rv, DependencyMount):
+        rv.__dependency_info__.guard += 1
+
     full_key = descr.__class__, descr.key
     scope_obj.instances[full_key] = rv
     return rv
