@@ -29,8 +29,8 @@ class DemoObject(DependencyMount):
 
 def test_depmgr(env):
     with env:
-        obj = DemoObject(env)
-        assert not obj.stuff.closed
+        with DemoObject(env) as obj:
+            assert not obj.stuff.closed
     instances = list(env.__dependency_info__.iter_instances())
     assert len(instances) == 1
     assert instances[0] is obj.stuff
