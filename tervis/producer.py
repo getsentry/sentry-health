@@ -21,6 +21,19 @@ class Producer(DependencyDescriptor):
         return ProducerImpl(env)
 
 
+class _FastFlush(object):
+
+    def __init__(self, producer):
+        self.producer = producer
+
+    def __aenter__(self):
+        return self
+
+    def __aexit__(self, exc_type, exc_value, tb):
+        if self.producer.event_count % 1000 == 0:
+            return self.producer.flush()
+
+
 class ProducerImpl(DependencyMount):
     producer = KafkaProducer()
     env = CurrentEnvironment()
@@ -28,45 +41,21 @@ class ProducerImpl(DependencyMount):
     def __init__(self, env):
         DependencyMount.__init__(self, parent=env)
         self.event_count = 0
-        self._depth = 0
 
-    @contextmanager
-    def full_guard(self):
-        start = time.time()
-        with self:
-            try:
-                yield
-            except KeyboardInterrupt:
-                pass
-        stop = time.time()
-        duration = stop - start
-        i = self.event_count
-        logger.info('%s total events produced in %0.2f seconds '
-                    '(%0.2f events/sec.)', i, duration, (i / duration))
+    async def close_async(self):
+        await self.flush()
+        return DependencyMount.close(self)
 
-    def flush(self):
+    async def flush(self):
         logger.info(
             'Waiting for producer to flush %s events...', len(self.producer))
+        # XXX: thread this
         self.producer.flush()
 
-    def __enter__(self):
-        self._depth += 1
-        return self
+    def fast_flush(self):
+        return _FastFlush(self)
 
-    def __exit__(self, exc_type, exc_value, tb):
-        self._depth -= 1
-        if self._depth == 0:
-            self.flush()
-
-    @contextmanager
-    def partial_guard(self):
-        try:
-            yield
-        finally:
-            if self.event_count % 1000 == 0:
-                self.flush()
-
-    def produce_event(self, project, event, timestamp=None):
+    async def produce_event(self, project, event, timestamp=None):
         produce = functools.partial(
             self.producer.produce, 'events',
             json.dumps([project, event]).encode('utf-8'),

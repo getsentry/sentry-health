@@ -6,6 +6,7 @@ from tervis.apiserver import Endpoint
 from tervis.event import normalize_event
 from tervis.auth import Auth
 from tervis.api import register_endpoint
+from tervis.producer import Producer
 
 
 @register_endpoint(
@@ -14,6 +15,7 @@ from tervis.api import register_endpoint
 )
 class SubmitEventEndpoint(Endpoint):
     auth = Auth()
+    producer = Producer()
 
     async def accept_event(self):
         line = await self.op.req.content.readline()
@@ -28,9 +30,8 @@ class SubmitEventEndpoint(Endpoint):
             raise ClientReadFailed(str(e))
 
     async def process_event(self, event):
-        with self.producer.partial_guard():
-            self.producer.produce_event(self.auth.project, event,
-                                        self.auth.timestamp)
+        self.producer.produce_event(self.auth.project, event,
+                                    self.auth.timestamp)
 
     async def handle(self):
         errors = []

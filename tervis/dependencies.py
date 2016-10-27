@@ -1,9 +1,7 @@
+import asyncio
 import inspect
+from inspect import isawaitable
 from weakref import ref as weakref
-from ._compat import iteritems, isawaitable, PY2
-
-if not PY2:
-    import asyncio
 
 
 containers = {}
@@ -32,37 +30,24 @@ class MountInfo(object):
             raise RuntimeError('Self reference was garbage collected')
         return rv
 
-    if PY2:
-        def close_and_collect(self):
-            if self.closed:
-                return
-            for inst in self.iter_instances():
-                if hasattr(inst, 'close'):
-                    inst.close()
-            self.closed = True
-
-    else:
-        exec('''if 1:
-            def close_and_collect(self):
-                if self.closed:
-                    return
-                waitables = []
-                for inst in self.iter_instances():
-                    if hasattr(inst, 'close'):
-                        rv = inst.close()
-                        if isawaitable(rv):
-                            waitables.append(rv)
-
-                self.closed = True
-                if waitables:
-                    async def _wait_and_discard():
-                        await asyncio.wait(waitables)
-                    return _wait_and_discard()
-        ''')
+    async def close_and_collect(self):
+        if self.closed:
+            return
+        waitables = []
+        for inst in self.iter_instances():
+            if hasattr(inst, 'close_async'):
+                rv = inst.close_async()
+                if isawaitable(rv):
+                    waitables.append(rv)
+            elif hasattr(inst, 'close'):
+                inst.close()
+        self.closed = True
+        if waitables:
+            await asyncio.wait(waitables)
 
     def iter_instances(self):
         self_cls = self.ref.__class__
-        for key, value in iteritems(self.instances):
+        for key, value in self.instances.items():
             if isinstance(value, weakref):
                 value = value()
             if value is not None:
@@ -101,34 +86,24 @@ class DependencyMount(object):
         self.__dependency_info__ = MountInfo(self, parent, scope,
                                              key, descriptor_type)
 
-    def close(self):
-        self.__dependency_info__.close_and_collect()
+    def close_async(self):
+        return self.__dependency_info__.close_and_collect()
 
     def __enter__(self):
         self.__dependency_info__.active += 1
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
+        return asyncio.get_event_loop().run_until_complete(
+            self.__aexit__(exc_type, exc_value, tb))
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    async def __aexit__(self, exc_type, exc_value, tb):
         self.__dependency_info__.active -= 1
         if self.__dependency_info__.active == 0:
-            wait_for = self.close()
-            if wait_for is not None:
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(wait_for)
-
-    # If we are on Py 3 we support async close methods.
-    if not PY2:
-        exec('''if 1:
-            async def __aenter__(self):
-                return self.__enter__()
-
-            async def __aexit__(self, exc_type, exc_value, tb):
-                self.__dependency_info__.active -= 1
-                if self.__dependency_info__.active == 0:
-                    wait_for = self.close()
-                    if wait_for is not None:
-                        await wait_for
-        ''')
+            await self.close_async()
 
 
 class DependencyDescriptor(object):

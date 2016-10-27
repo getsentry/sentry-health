@@ -15,7 +15,7 @@ class MyStuff(object):
         self.env = env
         self.closed = False
 
-    async def close(self):
+    async def close_async(self):
         self.closed = True
 
 

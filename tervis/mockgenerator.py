@@ -111,6 +111,5 @@ class MockGenerator(object):
         if count is not None:
             events = itertools.islice(events, count)
 
-        with self.producer.full_guard():
-            for i, (timestamp, project, event) in enumerate(events, 1):
-                self.producer.produce_event(project, event, timestamp)
+        for i, (timestamp, project, event) in enumerate(events, 1):
+            self.producer.produce_event(project, event, timestamp)
