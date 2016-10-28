@@ -9,6 +9,14 @@ from weakref import ref as weakref
 containers = {}
 
 
+class ManagedResource(object):
+    __slots__ = ('res', 'obj')
+
+    def __init__(self, res, obj):
+        self.res = res
+        self.obj = obj
+
+
 class MountInfo(object):
 
     def __init__(self, ref, parent, scope, key=None, descriptor_type=None,
@@ -42,12 +50,16 @@ class MountInfo(object):
         else:
             yield
 
-    async def close_and_collect(self):
+    async def close_and_collect(self, exc_type, exc_value, tb):
         if self.closed:
             return
         awaitables = []
         for inst in self.iter_instances():
-            if hasattr(inst, 'close_async'):
+            if isinstance(inst, ManagedResource):
+                if hasattr(inst.res, '__aexit__'):
+                    awaitables.append(inst.res.__aexit__(
+                        exc_type, exc_value, tb))
+            elif hasattr(inst, 'close_async'):
                 awaitables.append(inst.close_async())
             elif hasattr(inst, 'close'):
                 inst.close()
@@ -73,6 +85,8 @@ class MountInfo(object):
             if isinstance(rv, weakref):
                 rv = rv()
             if rv is not None:
+                if isinstance(rv, ManagedResource):
+                    rv = rv.obj
                 return rv
 
         # Do not move past the given scope.
@@ -98,7 +112,7 @@ class DependencyMount(object):
                                              synchronized)
 
     async def close_async(self):
-        await self.__dependency_info__.close_and_collect()
+        pass
 
     def __enter__(self):
         self.__dependency_info__.active += 1
@@ -116,6 +130,8 @@ class DependencyMount(object):
         self.__dependency_info__.active -= 1
         if self.__dependency_info__.active == 0:
             await self.close_async()
+            await self.__dependency_info__.close_and_collect(
+                exc_type, exc_value, tb)
 
 
 class DependencyDescriptor(object):
@@ -178,13 +194,12 @@ def resolve_or_ensure_dependency(descr, owner):
         if scope_obj is None:
             raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
 
-        rv = descr.instanciate(scope_obj.ref)
+        obj = res = descr.instanciate(scope_obj.ref)
 
-        # If we are producing a dependency mount we can safely active it.  The
-        # system will automatically invoke close() on teardown
-        if isinstance(rv, DependencyMount):
-            rv.__dependency_info__.active += 1
+        if hasattr(res, '__aenter__'):
+            obj = res.__aenter__()
+            res = ManagedResource(res=res, obj=obj)
 
         full_key = descr.__class__, descr.key
-        scope_obj.instances[full_key] = rv
-        return rv
+        scope_obj.instances[full_key] = res
+        return obj
