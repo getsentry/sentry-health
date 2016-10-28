@@ -1,5 +1,8 @@
 import asyncio
 import inspect
+
+from contextlib import contextmanager
+from threading import RLock
 from weakref import ref as weakref
 
 
@@ -7,10 +10,9 @@ containers = {}
 
 
 class MountInfo(object):
-    __slots__ = ('_ref', 'parent', 'scope', 'instances', 'key',
-                 'descriptor_type', 'active', 'closed')
 
-    def __init__(self, ref, parent, scope, key=None, descriptor_type=None):
+    def __init__(self, ref, parent, scope, key=None, descriptor_type=None,
+                 synchronized=False):
         self._ref = weakref(ref)
         if parent is not None:
             parent = parent.__dependency_info__
@@ -21,6 +23,9 @@ class MountInfo(object):
         self.descriptor_type = descriptor_type
         self.active = 0
         self.closed = False
+        self.synchronized = synchronized
+        if synchronized:
+            self._lock = RLock()
 
     @property
     def ref(self):
@@ -28,6 +33,14 @@ class MountInfo(object):
         if rv is None:
             raise RuntimeError('Self reference was garbage collected')
         return rv
+
+    @contextmanager
+    def locked(self):
+        if self.synchronized:
+            with self._lock:
+                yield
+        else:
+            yield
 
     async def close_and_collect(self):
         if self.closed:
@@ -79,9 +92,10 @@ class MountInfo(object):
 class DependencyMount(object):
 
     def __init__(self, parent=None, scope=None, key=None,
-                 descriptor_type=None):
+                 descriptor_type=None, synchronized=False):
         self.__dependency_info__ = MountInfo(self, parent, scope,
-                                             key, descriptor_type)
+                                             key, descriptor_type,
+                                             synchronized)
 
     async def close_async(self):
         await self.__dependency_info__.close_and_collect()
@@ -151,17 +165,26 @@ def resolve_or_ensure_dependency(descr, owner):
                            'owner object (%r) is not active. Use a '
                            'with block.' % owner.__class__.__name__)
 
-    scope_obj = info.find_scope(descr.scope)
-    if scope_obj is None:
-        raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
+    with info.locked():
+        # Look it up a second time in our lock if we are indeed a
+        # synchronized mount info
+        if info.synchronized:
+            rv = info.resolve_dependency(descr.scope, descr.key,
+                                         descr.__class__)
+            if rv is not None:
+                return rv
 
-    rv = descr.instanciate(scope_obj.ref)
+        scope_obj = info.find_scope(descr.scope)
+        if scope_obj is None:
+            raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
 
-    # If we are producing a dependency mount we can safely active it.  The
-    # system will automatically invoke close() on teardown
-    if isinstance(rv, DependencyMount):
-        rv.__dependency_info__.active += 1
+        rv = descr.instanciate(scope_obj.ref)
 
-    full_key = descr.__class__, descr.key
-    scope_obj.instances[full_key] = rv
-    return rv
+        # If we are producing a dependency mount we can safely active it.  The
+        # system will automatically invoke close() on teardown
+        if isinstance(rv, DependencyMount):
+            rv.__dependency_info__.active += 1
+
+        full_key = descr.__class__, descr.key
+        scope_obj.instances[full_key] = rv
+        return rv

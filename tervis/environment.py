@@ -63,7 +63,8 @@ class Environment(DependencyMount):
     def __init__(self, config=None):
         DependencyMount.__init__(self,
             scope='env',
-            descriptor_type=CurrentEnvironment
+            descriptor_type=CurrentEnvironment,
+            synchronized=True
         )
         if config is None:
             config = discover_config()
