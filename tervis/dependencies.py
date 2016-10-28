@@ -1,6 +1,5 @@
 import asyncio
 import inspect
-from inspect import isawaitable
 from weakref import ref as weakref
 
 
@@ -33,17 +32,15 @@ class MountInfo(object):
     async def close_and_collect(self):
         if self.closed:
             return
-        waitables = []
+        awaitables = []
         for inst in self.iter_instances():
             if hasattr(inst, 'close_async'):
-                rv = inst.close_async()
-                if isawaitable(rv):
-                    waitables.append(rv)
+                awaitables.append(inst.close_async())
             elif hasattr(inst, 'close'):
                 inst.close()
         self.closed = True
-        if waitables:
-            await asyncio.wait(waitables)
+        if awaitables:
+            await asyncio.wait(awaitables)
 
     def iter_instances(self):
         self_cls = self.ref.__class__
@@ -86,16 +83,17 @@ class DependencyMount(object):
         self.__dependency_info__ = MountInfo(self, parent, scope,
                                              key, descriptor_type)
 
-    def close_async(self):
-        return self.__dependency_info__.close_and_collect()
+    async def close_async(self):
+        await self.__dependency_info__.close_and_collect()
 
     def __enter__(self):
         self.__dependency_info__.active += 1
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        return asyncio.get_event_loop().run_until_complete(
-            self.__aexit__(exc_type, exc_value, tb))
+        coro = self.__aexit__(exc_type, exc_value, tb)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(coro)
 
     async def __aenter__(self):
         return self.__enter__()

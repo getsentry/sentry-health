@@ -55,5 +55,12 @@ class Server(DependencyMount):
         if port is None:
             port = self.env.get_config('apiserver.port')
         with self.producer:
-            web.run_app(self.app, host=host, port=port,
-                        print=lambda *a, **kw: None)
+            # We need to make sure that the run_app method does not
+            # terminate the event loop when it closes down.  This would be
+            # an issue for our cleanup logic.
+            self.app.loop.close = lambda: None
+            try:
+                web.run_app(self.app, host=host, port=port,
+                            print=lambda *a, **kw: None)
+            finally:
+                del self.app.loop.close
