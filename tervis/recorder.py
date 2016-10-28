@@ -4,6 +4,7 @@ import logging
 
 from collections import defaultdict
 from contextlib import closing
+from concurrent.futures import ThreadPoolExecutor
 
 from confluent_kafka import KafkaError, TopicPartition
 
@@ -15,7 +16,7 @@ from .environment import CurrentEnvironment
 logger = logging.getLogger(__name__)
 
 
-def batch(consumer, func, size=10000, async=True):
+def batch(consumer, func, size=10000):
     start = time.time()
 
     # XXX: This is not currently partition aware for the sake of simplicity --
@@ -41,7 +42,7 @@ def batch(consumer, func, size=10000, async=True):
         func(messages)
         offsets = [TopicPartition(message.topic(), message.partition(),
                                   message.offset() + 1)]
-        consumer.commit(offsets=offsets, async=async)
+        consumer.commit(offsets=offsets, async=False)
         duration = time.time() - start
         logger.info('Processed %s events in %0.2f seconds (%0.2f '
                     'messages/sec), committed offsets: %r',
@@ -189,11 +190,9 @@ class Recorder(DependencyMount):
         pipeline.execute()
 
     def run(self):
-        with closing(self.consumer):
-            try:
-                batch(self.consumer, self.process, size=self.batch_size,
-                      async=False)
-            except KeyboardInterrupt:
-                pass
-            except Exception as e:
-                logger.exception(e)
+        try:
+            batch(self.consumer, self.process, size=self.batch_size)
+        except KeyboardInterrupt:
+            pass
+        except Exception as e:
+            logger.exception(e)

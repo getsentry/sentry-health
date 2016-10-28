@@ -20,7 +20,8 @@ def cli():
 def recorder(env):
     """Runs the recorder."""
     from .recorder import Recorder
-    Recorder(env).run()
+    with Recorder(env) as recorder:
+        recorder.run()
 
 
 @cli.command()
@@ -28,7 +29,8 @@ def recorder(env):
 def generator(env):
     """Runs a dummy generator."""
     from .mockgenerator import MockGenerator
-    MockGenerator(env).run()
+    with MockGenerator(env) as gen:
+        gen.run()
 
 
 @cli.command()

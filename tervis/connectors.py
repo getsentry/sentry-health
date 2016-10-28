@@ -8,7 +8,6 @@ from .dependencies import DependencyDescriptor
 
 
 consumer_logger = logging.getLogger(__name__ + '.consumer')
-producer_logger = logging.getLogger(__name__ + '.producer')
 
 
 class KafkaConsumer(DependencyDescriptor):
@@ -26,7 +25,7 @@ class KafkaConsumer(DependencyDescriptor):
         if self.topics is None:
             return rv
         def _handle_assignment(consumer, partitions):
-            self.consumer_logger.debug(
+            consumer_logger.debug(
                 'Received assignments: %r',
                 [(p.topic, p.partition) for p in partitions]
             )

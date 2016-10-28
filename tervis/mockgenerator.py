@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from ._compat import text_type
 from .producer import Producer
+from .dependencies import DependencyMount
 
 
 logger = logging.getLogger(__name__)
@@ -89,11 +90,11 @@ def generate(random, timestamp):
         }
 
 
-class MockGenerator(object):
+class MockGenerator(DependencyMount):
     producer = Producer()
 
     def __init__(self, env, seed=None, epoch=None):
-        self.env = env
+        DependencyMount.__init__(self, parent=env)
 
         if epoch is None:
             epoch = time.time()
