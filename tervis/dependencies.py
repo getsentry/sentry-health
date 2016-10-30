@@ -186,9 +186,10 @@ def resolve_or_ensure_dependency(descr, owner):
         return rv
 
     if info.active == 0:
-        raise RuntimeError('Attempted to resolve dependency but the '
+        raise RuntimeError('Attempted to resolve dependency %r but the '
                            'owner object (%r) is not active. Use a '
-                           'with block.' % owner.__class__.__name__)
+                           'with block.' % (descr.__class__.__name__,
+                                            owner.__class__.__name__))
 
     with info.locked():
         # Look it up a second time in our lock if we are indeed a
@@ -201,7 +202,9 @@ def resolve_or_ensure_dependency(descr, owner):
 
         scope_obj = info.find_scope(descr.scope)
         if scope_obj is None:
-            raise RuntimeError('Could not find scope "%s"' % (descr.scope,))
+            raise RuntimeError('Could not find scope "%s" from %r to resolve %r'
+                               % (descr.scope, owner.__class__.__name__,
+                                  descr.__class__.__name__))
 
         obj = res = descr.instanciate(scope_obj.ref)
 
