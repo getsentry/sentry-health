@@ -54,11 +54,13 @@ class MountInfo(object):
         if self.closed:
             return
         awaitables = []
-        for inst in self.iter_instances():
+        for inst in self.iter_instances(raw=True):
             if isinstance(inst, ManagedResource):
                 if hasattr(inst.res, '__aexit__'):
                     awaitables.append(inst.res.__aexit__(
                         exc_type, exc_value, tb))
+                elif hasattr(inst.res, '__exit__'):
+                    inst.res.__exit__(exc_type, exc_value, tb)
             elif hasattr(inst, 'close_async'):
                 awaitables.append(inst.close_async())
             elif hasattr(inst, 'close'):
@@ -67,12 +69,13 @@ class MountInfo(object):
         if awaitables:
             await asyncio.wait(awaitables)
 
-    def iter_instances(self):
-        self_cls = self.ref.__class__
+    def iter_instances(self, raw=False):
         for key, value in self.instances.items():
             if isinstance(value, weakref):
                 value = value()
             if value is not None:
+                if not raw and isinstance(value, ManagedResource):
+                    value = value.obj
                 yield value
 
     def resolve_dependency(self, scope, key, descriptor_type):
@@ -115,8 +118,9 @@ class DependencyMount(object):
         pass
 
     def __enter__(self):
-        self.__dependency_info__.active += 1
-        return self
+        coro = self.__aenter__()
+        loop = asyncio.get_event_loop()
+        return loop.run_until_complete(coro)
 
     def __exit__(self, exc_type, exc_value, tb):
         coro = self.__aexit__(exc_type, exc_value, tb)
@@ -124,7 +128,8 @@ class DependencyMount(object):
         loop.run_until_complete(coro)
 
     async def __aenter__(self):
-        return self.__enter__()
+        self.__dependency_info__.active += 1
+        return self
 
     async def __aexit__(self, exc_type, exc_value, tb):
         self.__dependency_info__.active -= 1
@@ -197,7 +202,10 @@ def resolve_or_ensure_dependency(descr, owner):
         obj = res = descr.instanciate(scope_obj.ref)
 
         if hasattr(res, '__aenter__'):
-            obj = res.__aenter__()
+            obj = asyncio.get_event_loop().run_until_complete(res.__aenter__())
+            res = ManagedResource(res=res, obj=obj)
+        elif hasattr(res, '__enter__'):
+            obj = res.__enter__()
             res = ManagedResource(res=res, obj=obj)
 
         full_key = descr.__class__, descr.key

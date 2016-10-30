@@ -15,7 +15,10 @@ class MyStuff(object):
         self.env = env
         self.closed = False
 
-    async def close_async(self):
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, tb):
         self.closed = True
 
 
@@ -27,10 +30,12 @@ class DemoObject(DependencyMount):
         DependencyMount.__init__(self, parent=env)
 
 
-def test_basic(env):
+def test_basic(env_factory):
+    env = env_factory()
     with env:
         with DemoObject(env) as obj:
             assert not obj.stuff.closed
+        assert not obj.stuff.closed
     instances = list(env.__dependency_info__.iter_instances())
     assert len(instances) == 1
     assert instances[0] is obj.stuff
