@@ -149,6 +149,10 @@ class DependencyDescriptor(object):
         necessary.
     *   if the returned object has a `close()` method it will be invoked
         when the owner is shut down.
+
+    To note is that the object creation is synchronous.  This also applies
+    for `__aenter__`.  The entering of the object is performed by executing
+    it through the event loop blocking.
     """
     scope = 'env'
     key = None
