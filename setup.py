@@ -18,6 +18,8 @@ setup(
         'confluent-kafka~=0.9',
         'redis~=2.10',
         'aiohttp~=1.0.3',
+        'SQLAlchemy~=1.1.3',
+        'aiopg~=0.12.0',
     ],
     entry_points={
         'console_scripts': [
