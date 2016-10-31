@@ -71,6 +71,7 @@ dsns = meta.Table('sentry_projectkey',
     meta.Column('project_id', meta.BigInteger),
     meta.Column('public_key', meta.String),
     meta.Column('status', meta.Integer),
+    meta.Column('roles', meta.Integer),
 )
 
 
@@ -127,6 +128,9 @@ class AuthManager(DependencyMount):
 
         if dsn.project_id != ai.project_id:
             raise BadAuth('Project ID mismatch')
+
+        if dsn.roles & 1 == 0:
+            raise BadAuth('Key is not enabled for event submission')
 
         return ai
 
