@@ -20,7 +20,7 @@ def parse_auth_header(header):
         if len(items) != 2:
             continue
         key = items[0].strip()
-        value = items[0].strip()
+        value = items[1].strip()
         if key[:7] == 'sentry_':
             key = key[7:]
         d[key] = value
@@ -114,11 +114,16 @@ class AuthManager(DependencyMount):
     async def validate_auth(self):
         header = self.get_auth_header()
         ai = AuthInfo.from_header(header, self.op.project_id)
-        dsn = await self.db.conn.execute(dsns.select()
-            .where(dsns.c.project_id == ai.project_id)).fetchone()
 
-        if dns is None or dsn.status != DSN_ACTIVE:
+        results = await self.db.conn.execute(dsns.select()
+            .where(dsns.c.project_id == ai.project_id))
+        dsn = await results.fetchone()
+
+        if dsn is None or dsn.status != DSN_ACTIVE:
             raise BadAuth('Unknown authentication')
+
+        if dsn.public_key != ai.public_key:
+            raise BadAuth('Bad public key')
 
         if dsn.project_id != ai.project_id:
             raise BadAuth('Project ID mismatch')
@@ -126,12 +131,10 @@ class AuthManager(DependencyMount):
         return ai
 
     async def __aenter__(self):
+        await DependencyMount.__aenter__(self)
         try:
             return await self.validate_auth()
         except BadAuth:
             if self.optional:
                 return INVALID_AUTH
             raise
-
-    async def __aexit__(self, exc_type, exc_value, tb):
-        pass

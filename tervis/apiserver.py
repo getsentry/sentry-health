@@ -32,7 +32,7 @@ class Endpoint(DependencyMount):
                         raise ApiError('Invalid project ID')
                 async with Operation(env, req, project_id) as op:
                     async with cls(op) as self:
-                        return await self.handle_full()
+                        return await self.handle()
             except ApiError as e:
                 return e.get_response()
         return handler
