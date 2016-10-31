@@ -1,7 +1,7 @@
 import time
 
 from tervis.exceptions import BadAuth
-from tervis.dependencies import DependencyDescriptor
+from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.db import Database, meta
 
 
@@ -76,7 +76,6 @@ dsns = meta.Table('sentry_projectkey',
 
 class Auth(DependencyDescriptor):
     scope = 'operation'
-    db = Database(config='apiserver.auth_db')
 
     def __init__(self, optional=False):
         self.optional = optional
@@ -86,38 +85,42 @@ class Auth(DependencyDescriptor):
         return (self.optional,)
 
     def instanciate(self, op):
-        if op.req is None:
+        return AuthManager(op, self.optional)
+
+
+class AuthManager(DependencyMount):
+    db = Database(config='apiserver.auth_db')
+
+    def __init__(self, op, optional):
+        DependencyMount.__init__(self, parent=op)
+        self.op = op
+        self.optional = optional
+
+    def get_auth_header(self):
+        if self.op.req is None:
             if self.optional:
                 return INVALID_AUTH
             raise RuntimeError('Authentication information requires active '
                                'request.')
 
-        header = op.req.headers.get('x-sentry-auth')
+        header = self.op.req.headers.get('x-sentry-auth')
         if not header:
             if self.optional:
                 return INVALID_AUTH
             raise BadAuth('No authentication header supplied')
 
-        return AuthManager(header, self.optional, op.project_id, self.db)
-
-
-class AuthManager(object):
-
-    def __init__(self, header, optional, project_id, db):
-        self.header = header
-        self.optional = optional
-        self.project_id = project_id
-        self.db = db
+        return header
 
     async def validate_auth(self):
-        ai = AuthInfo.from_header(self.header, self.project)
+        header = self.get_auth_header()
+        ai = AuthInfo.from_header(header, self.op.project_id)
         dsn = await self.db.conn.execute(dsns.select()
             .where(dsns.c.project_id == ai.project_id)).fetchone()
 
         if dns is None or dsn.status != DSN_ACTIVE:
             raise BadAuth('Unknown authentication')
 
-        if self.project_id != ai.project_id:
+        if dsn.project_id != ai.project_id:
             raise BadAuth('Project ID mismatch')
 
         return ai

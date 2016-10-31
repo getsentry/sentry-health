@@ -1,3 +1,5 @@
+import json
+
 from ._compat import implements_to_string
 
 
