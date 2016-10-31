@@ -1,12 +1,11 @@
 import json
 
-from aiohttp import web
-
 from tervis.apiserver import Endpoint
 from tervis.event import normalize_event
 from tervis.auth import Auth
-from tervis.api import register_endpoint
+from tervis.api import register_endpoint, ApiResponse
 from tervis.producer import Producer
+from tervis.exceptions import ApiError, PayloadTooLarge, ClientReadFailed
 
 
 @register_endpoint(
@@ -46,7 +45,7 @@ class SubmitEventEndpoint(Endpoint):
             except ApiError as e:
                 errors.append(e.to_json())
 
-        return web.Response(text=json.dumps({
+        return ApiResponse({
             'errors': errors,
             'events': events,
-        }))
+        })

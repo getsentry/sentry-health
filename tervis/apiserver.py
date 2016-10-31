@@ -1,7 +1,7 @@
 from aiohttp import web
 
 from tervis.producer import Producer
-from tervis.exceptions import ApiError, PayloadTooLarge, ClientReadFailed
+from tervis.exceptions import ApiError
 from tervis.operation import CurrentOperation, Operation
 from tervis.environment import CurrentEnvironment
 from tervis.dependencies import DependencyDescriptor, DependencyMount
@@ -32,7 +32,7 @@ class Endpoint(DependencyMount):
                         raise ApiError('Invalid project ID')
                 async with Operation(env, req, project_id) as op:
                     async with cls(op) as self:
-                        return await self.handle()
+                        return (await self.handle()).get_response()
             except ApiError as e:
                 return e.get_response()
         return handler
