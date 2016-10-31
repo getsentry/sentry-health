@@ -23,14 +23,25 @@ class Endpoint(DependencyMount):
     @classmethod
     def as_handler(cls, env):
         async def handler(req):
-            project = req.match_info.get('project')
-            async with Operation(env, req, project) as op:
+            project_id = req.match_info.get('project_id')
+            if project_id is not None:
+                try:
+                    project_id = int(project_id)
+                except ValueError:
+                    raise ApiError('Invalid project ID')
+            async with Operation(env, req, project_id) as op:
                 async with cls(op) as self:
-                    return await self.handle()
+                    return await self.handle_full()
         return handler
 
     async def handle(self):
         raise NotImplementedError('This endpoint cannot handle')
+
+    async def handle_full(self):
+        try:
+            return await self.handle()
+        except ApiError as e:
+            return e.get_response()
 
 
 class Server(DependencyMount):

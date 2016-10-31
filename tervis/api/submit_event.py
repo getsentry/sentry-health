@@ -11,7 +11,7 @@ from tervis.producer import Producer
 
 @register_endpoint(
     method='POST',
-    path='/events/{project}',
+    path='/events/{project_id}',
 )
 class SubmitEventEndpoint(Endpoint):
     auth = Auth()
@@ -30,7 +30,7 @@ class SubmitEventEndpoint(Endpoint):
             raise ClientReadFailed(str(e))
 
     async def process_event(self, event):
-        self.producer.produce_event(self.auth.project, event,
+        self.producer.produce_event(self.auth.project_id, event,
                                     self.auth.timestamp)
 
     async def handle(self):

@@ -262,6 +262,9 @@ def resolve_or_ensure_dependency(descr, owner, box_init=False):
                                   descr.__class__.__name__))
 
         res = obj = descr.instanciate(scope_obj.ref)
+        if res is None:
+            raise RuntimeError('Dependencies are not allowed to produce '
+                               '"None" instances.')
 
         # Non lazy objects that are context managers are represented by an
         # uninitiliazed stand-in until the container is entered.

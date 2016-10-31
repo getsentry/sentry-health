@@ -1,7 +1,12 @@
 import time
 
-from .exceptions import BadAuth
-from .dependencies import DependencyDescriptor
+from tervis.exceptions import BadAuth
+from tervis.dependencies import DependencyDescriptor
+from tervis.db import Database, meta
+
+
+DSN_ACTIVE = 0
+DSN_INACTIVE = 1
 
 
 def parse_auth_header(header):
@@ -24,21 +29,28 @@ def parse_auth_header(header):
 
 class AuthInfo(object):
 
-    def __init__(self, project, client, public_key, timestamp):
-        self.project = project
+    def __init__(self, project_id, client, public_key, timestamp):
+        self.project_id = project_id
         self.client = client
         self.public_key = public_key
         self.timestamp = timestamp
 
-    @staticmethod
-    def from_header(header, project):
-        return AuthInfo.from_dict(parse_auth_header(header), project)
+    def __bool__(self):
+        return self.is_valid
+
+    @property
+    def is_valid(self):
+        return self.project_id is not None
 
     @staticmethod
-    def from_dict(d, project):
+    def from_header(header, project_id):
+        return AuthInfo.from_dict(parse_auth_header(header), project_id)
+
+    @staticmethod
+    def from_dict(d, project_id):
         try:
             return AuthInfo(
-                project=project,
+                project_id=project_id,
                 public_key=d['key'],
                 timestamp=d['timestamp'],
                 client=d['client'],
@@ -46,10 +58,77 @@ class AuthInfo(object):
         except KeyError as e:
             raise BadAuth('Missing auth parameter "%s"' % e)
 
+INVALID_AUTH = AuthInfo(
+    project_id=None,
+    client=None,
+    public_key=None,
+    timestamp=None
+)
+
+
+dsns = meta.Table('sentry_projectkey',
+    meta.Column('id', meta.BigInteger, primary_key=True),
+    meta.Column('project_id', meta.BigInteger),
+    meta.Column('public_key', meta.String),
+    meta.Column('status', meta.Integer),
+)
+
 
 class Auth(DependencyDescriptor):
     scope = 'operation'
+    db = Database(config='apiserver.auth_db')
+
+    def __init__(self, optional=False):
+        self.optional = optional
+
+    @property
+    def key(self):
+        return (self.optional,)
 
     def instanciate(self, op):
+        if op.req is None:
+            if self.optional:
+                return INVALID_AUTH
+            raise RuntimeError('Authentication information requires active '
+                               'request.')
+
         header = op.req.headers.get('x-sentry-auth')
-        return AuthInfo.from_header(header, op.project)
+        if not header:
+            if self.optional:
+                return INVALID_AUTH
+            raise BadAuth('No authentication header supplied')
+
+        return AuthManager(header, self.optional, op.project_id, self.db)
+
+
+class AuthManager(object):
+
+    def __init__(self, header, optional, project_id, db):
+        self.header = header
+        self.optional = optional
+        self.project_id = project_id
+        self.db = db
+
+    async def validate_auth(self):
+        ai = AuthInfo.from_header(self.header, self.project)
+        dsn = await self.db.conn.execute(dsns.select()
+            .where(dsns.c.project_id == ai.project_id)).fetchone()
+
+        if dns is None or dsn.status != DSN_ACTIVE:
+            raise BadAuth('Unknown authentication')
+
+        if self.project_id != ai.project_id:
+            raise BadAuth('Project ID mismatch')
+
+        return ai
+
+    async def __aenter__(self):
+        try:
+            return await self.validate_auth()
+        except BadAuth:
+            if self.optional:
+                return INVALID_AUTH
+            raise
+
+    async def __aexit__(self, exc_type, exc_value, tb):
+        pass
