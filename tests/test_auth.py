@@ -3,7 +3,7 @@ from tervis.auth import dsns, DSN_ACTIVE
 
 def test_auth_basics(auth_db, runasync):
     @runasync
-    async def test():
+    async def dsn():
         await auth_db.conn.execute(dsns.insert(values={
             'project_id': 42,
             'public_key': 'a' * 20,
@@ -13,3 +13,6 @@ def test_auth_basics(auth_db, runasync):
         rv = await auth_db.conn.execute(dsns.select())
         rows = await rv.fetchall()
         assert len(rows) == 1
+        return rows[0]
+
+    assert dsn['project_id'] == 42

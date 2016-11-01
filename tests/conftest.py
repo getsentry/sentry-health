@@ -84,6 +84,5 @@ def auth_db(request, op):
 def runasync():
     import asyncio
     def runner(f):
-        asyncio.get_event_loop().run_until_complete(f())
-        return f
+        return asyncio.get_event_loop().run_until_complete(f())
     return runner
