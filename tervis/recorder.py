@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from confluent_kafka import KafkaError, TopicPartition
 
-from .connectors import KafkaConsumer, Redis
-from .dependencies import DependencyMount
-from .environment import CurrentEnvironment
+from tervis.connectors import KafkaConsumer, Redis
+from tervis.dependencies import DependencyMount
+from tervis.environment import CurrentEnvironment
 
 
 logger = logging.getLogger(__name__)

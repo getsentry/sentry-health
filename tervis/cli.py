@@ -3,7 +3,7 @@ import sys
 import click
 import logging
 
-from .environment import Environment
+from tervis.environment import Environment
 
 
 pass_environment = click.make_pass_decorator(Environment, ensure=True)
@@ -19,7 +19,7 @@ def cli():
 @pass_environment
 def recorder(env):
     """Runs the recorder."""
-    from .recorder import Recorder
+    from tervis.recorder import Recorder
     with Recorder(env) as recorder:
         recorder.run()
 
@@ -28,7 +28,7 @@ def recorder(env):
 @pass_environment
 def generator(env):
     """Runs a dummy generator."""
-    from .mockgenerator import MockGenerator
+    from tervis.mockgenerator import MockGenerator
     with MockGenerator(env) as gen:
         gen.run()
 
@@ -63,7 +63,7 @@ def shell(env):
 @pass_environment
 def apiserver(env, host, port):
     """Runs the api server."""
-    from .apiserver import Server
+    from tervis.apiserver import Server
     with env:
         with Server(env) as server:
             server.run(host=host, port=port)

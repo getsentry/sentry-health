@@ -1,7 +1,7 @@
 import sys
 import pkgutil
 
-from ._compat import iteritems
+from tervis._compat import iteritems
 
 
 def merge(*objs):

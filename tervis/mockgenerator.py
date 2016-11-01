@@ -7,9 +7,8 @@ import functools
 
 from collections import defaultdict
 
-from ._compat import text_type
-from .producer import Producer
-from .dependencies import DependencyMount
+from tervis.producer import Producer
+from tervis.dependencies import DependencyMount
 
 
 logger = logging.getLogger(__name__)

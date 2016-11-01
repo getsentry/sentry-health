@@ -1,10 +1,10 @@
 import os
 import yaml
 
-from ._compat import text_type
-from .utils import merge, iter_segments
-from .exceptions import ConfigError
-from .dependencies import DependencyMount, DependencyDescriptor
+from tervis._compat import text_type
+from tervis.utils import merge, iter_segments
+from tervis.exceptions import ConfigError
+from tervis.dependencies import DependencyMount, DependencyDescriptor
 
 
 CONFIG_DEFAULTS = {

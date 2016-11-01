@@ -8,10 +8,10 @@ import functools
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 
-from ._compat import text_type
-from .connectors import KafkaProducer
-from .dependencies import DependencyDescriptor, DependencyMount
-from .environment import CurrentEnvironment
+from tervis._compat import text_type
+from tervis.connectors import KafkaProducer
+from tervis.dependencies import DependencyDescriptor, DependencyMount
+from tervis.environment import CurrentEnvironment
 
 
 logger = logging.getLogger(__name__)

@@ -1,8 +1,8 @@
 from ipaddress import ip_address
 from functools import partial
 
-from .exceptions import ApiError
-from ._compat import scalar_types, number_types, string_types
+from tervis.exceptions import ApiError
+from tervis._compat import scalar_types, number_types, string_types
 
 
 def expect_type(data, key, ty, allow_none=False, validate=None,

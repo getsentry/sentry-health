@@ -1,5 +1,5 @@
-from .dependencies import DependencyMount, DependencyDescriptor
-from .environment import CurrentEnvironment
+from tervis.dependencies import DependencyMount, DependencyDescriptor
+from tervis.environment import CurrentEnvironment
 
 
 class CurrentOperation(DependencyDescriptor):
