@@ -1,44 +1,8 @@
 from aiohttp import web
 
 from tervis.producer import Producer
-from tervis.exceptions import ApiError
-from tervis.operation import CurrentOperation, Operation
 from tervis.environment import CurrentEnvironment
-from tervis.dependencies import DependencyDescriptor, DependencyMount
-
-
-class CurrentEndpoint(DependencyDescriptor):
-    pass
-
-
-class Endpoint(DependencyMount):
-    op = CurrentOperation()
-
-    def __init__(self, op):
-        DependencyMount.__init__(self,
-            parent=op,
-            descriptor_type=CurrentEndpoint
-        )
-
-    @classmethod
-    def as_handler(cls, env):
-        async def handler(req):
-            try:
-                project_id = req.match_info.get('project_id')
-                if project_id is not None:
-                    try:
-                        project_id = int(project_id)
-                    except ValueError:
-                        raise ApiError('Invalid project ID')
-                async with Operation(env, req, project_id) as op:
-                    async with cls(op) as self:
-                        return (await self.handle()).get_response()
-            except ApiError as e:
-                return e.get_response()
-        return handler
-
-    async def handle(self):
-        raise NotImplementedError('This endpoint cannot handle')
+from tervis.dependencies import DependencyMount
 
 
 class Server(DependencyMount):

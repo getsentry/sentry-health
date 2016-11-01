@@ -1,11 +1,11 @@
 import json
 
-from tervis.apiserver import Endpoint
 from tervis.event import normalize_event
 from tervis.auth import Auth
-from tervis.api import register_endpoint, ApiResponse
+from tervis.api import register_endpoint
 from tervis.producer import Producer
 from tervis.exceptions import ApiError, PayloadTooLarge, ClientReadFailed
+from tervis.web import Endpoint, ApiResponse
 
 
 @register_endpoint(

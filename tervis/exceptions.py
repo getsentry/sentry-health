@@ -1,6 +1,6 @@
 import json
 
-from ._compat import implements_to_string
+from tervis._compat import implements_to_string
 
 
 class ConfigError(ValueError):
@@ -25,12 +25,7 @@ class ApiError(Exception):
         }
 
     def get_response(self):
-        # Use local import since this code might be included in older
-        # versions of Python that do not support async
-        from aiohttp import web
-        return web.Response(text=json.dumps(self.to_json()),
-                            status=self.status_code,
-                            content_type='application/json')
+        return web.ApiResponse(self.to_json(), status_code=self.status_code)
 
 
 class BadAuth(ApiError):
@@ -43,3 +38,6 @@ class ClientReadFailed(ApiError):
 
 class PayloadTooLarge(ApiError):
     pass
+
+
+from tervis import web
