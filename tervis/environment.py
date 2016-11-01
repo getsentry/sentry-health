@@ -3,7 +3,6 @@ import yaml
 
 from tervis._compat import text_type
 from tervis.utils import merge, iter_segments
-from tervis.exceptions import ConfigError
 from tervis.dependencies import DependencyMount, DependencyDescriptor
 
 
@@ -15,6 +14,9 @@ CONFIG_DEFAULTS = {
             'max_json_packet': 1024 * 64,
         },
         'auth_db': 'default',
+        'blacklisted_ips': [],
+        'whitelisted_ips': [],
+        'proxies': [],
     },
     'recorder': {
         'ttl': 60 * 60 * 24 * 7,
@@ -74,8 +76,9 @@ class Environment(DependencyMount):
         rv = self.config
         for seg in iter_segments(items):
             if not isinstance(rv, dict):
-                raise ConfigError('%r is not not a dictionary' %
-                                  '.'.join(map(text_type, seg)))
+                raise exceptions.ConfigError(
+                    '%r is not not a dictionary' %
+                    '.'.join(map(text_type, seg)))
             if rv is None:
                 rv = {}
             rv = rv.get(seg)
@@ -88,3 +91,6 @@ class Environment(DependencyMount):
     def get_producer_config(self):
         return merge(self.get_config('kafka.common'),
                      self.get_config('kafka.producer'))
+
+
+from tervis import exceptions

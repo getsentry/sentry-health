@@ -29,7 +29,11 @@ class ApiError(Exception):
 
 
 class BadAuth(ApiError):
-    pass
+    status_code = 403
+
+
+class ClientBlacklisted(ApiError):
+    status_code = 403
 
 
 class ClientReadFailed(ApiError):

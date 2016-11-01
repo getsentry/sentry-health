@@ -1,8 +1,34 @@
 import json
+import socket
+from ipaddress import ip_address
 from aiohttp import web
 
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.operation import CurrentOperation, Operation
+
+
+def is_valid_proxy(env, ip):
+    for proxy_ip in env.get_config('apiserver.proxies'):
+        proxy_ip = ip_address(proxy_ip)
+        if ip_address(ip) == proxy_ip:
+            return True
+    return False
+
+
+def get_remote_addr(env, req):
+    try:
+        ip_trail = [x.strip().split(':')[0] for x in
+                    req.headers['X-FORWARDED-FOR'].split(',')]
+    except LookupError:
+        ip_trail = []
+
+    if len(ip_trial) >= 2:
+        if all(is_valid_proxy(env, ip) for ip in ip_trial[1:]):
+            return ip_trail[0]
+
+    family = self.transport.get_extra_info('socket').family
+    if family in (socket.AF_INET, socket.AF_INET6):
+        return self.transport.get_extra_info('peername')[0]
 
 
 class ApiResponse(object):
