@@ -66,7 +66,8 @@ INVALID_AUTH = AuthInfo(
 )
 
 
-dsns = meta.Table('sentry_projectkey',
+metadata = meta.MetaData()
+dsns = meta.Table('sentry_projectkey', metadata,
     meta.Column('id', meta.BigInteger, primary_key=True),
     meta.Column('project_id', meta.BigInteger),
     meta.Column('public_key', meta.String),

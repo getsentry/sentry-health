@@ -26,6 +26,8 @@ shell:
 	docker run $(DOCKER_RUN_OPTS) shell
 
 test:
+	@psql -c "drop database sentry_health_test" > /dev/null
+	@psql -c "create database sentry_health_test" > /dev/null
 	py.test --tb=short tests -vv
 
 .PHONY: up upd down build recorder generator shell
