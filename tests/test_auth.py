@@ -1,4 +1,4 @@
-from tervis.auth import dsns, DSN_ACTIVE
+from tervis.auth import dsns, DSN_ACTIVE, AuthInfo
 
 
 def test_auth_basics(auth_db, runasync):
@@ -16,3 +16,10 @@ def test_auth_basics(auth_db, runasync):
         return rows[0]
 
     assert dsn['project_id'] == 42
+
+    ai = AuthInfo.from_header('Sentry sentry_key=%s, sentry_timestamp=23, '
+                              'sentry_client=foo/1.0' % ('a' * 20), 42)
+    assert ai.project_id == 42
+    assert ai.client == 'foo/1.0'
+    assert ai.public_key == 'a' * 20
+    assert ai.timestamp == 23.0

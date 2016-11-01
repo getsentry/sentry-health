@@ -52,11 +52,13 @@ class AuthInfo(object):
             return AuthInfo(
                 project_id=project_id,
                 public_key=d['key'],
-                timestamp=d['timestamp'],
+                timestamp=float(d['timestamp']),
                 client=d['client'],
             )
         except KeyError as e:
             raise BadAuth('Missing auth parameter "%s"' % e)
+        except ValueError as e:
+            raise BadAuth('Invalid value for auth header')
 
 INVALID_AUTH = AuthInfo(
     project_id=None,
