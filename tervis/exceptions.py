@@ -41,7 +41,7 @@ class ClientReadFailed(ApiError):
 
 
 class PayloadTooLarge(ApiError):
-    pass
+    status_code = 413
 
 
 from tervis import web
