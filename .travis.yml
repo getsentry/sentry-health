@@ -1,6 +1,9 @@
 sudo: false
 language: python
 
+services:
+  - postgresql
+
 python:
   - "3.5"
 
@@ -10,5 +13,8 @@ install:
   - pip install flake8
   - LDFLAGS=-L`pwd`/.local/lib CFLAGS=-I`pwd`/.local/include pip install --editable .
 
+before_script:
+  - psql -c 'create database sentry_health_test' -U postgres
+
 script:
-  - make lint test
+  - make lint test-light

@@ -25,12 +25,16 @@ apiserver:
 shell:
 	docker run $(DOCKER_RUN_OPTS) shell
 
-test:
+clean-db:
 	@psql -c "drop database sentry_health_test" > /dev/null
 	@psql -c "create database sentry_health_test" > /dev/null
+
+test-light:
 	py.test --tb=short tests -vv
+
+test: clean-db test-light
 
 lint:
 	@flake8 tervis
 
-.PHONY: up upd down build recorder generator shell test lint
+.PHONY: up upd down build recorder generator shell clean-db test-light test lint
