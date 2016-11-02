@@ -1,9 +1,7 @@
 import time
-import json
 import random
 import logging
 import itertools
-import functools
 
 from collections import defaultdict
 

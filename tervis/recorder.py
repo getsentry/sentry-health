@@ -3,8 +3,6 @@ import json
 import logging
 
 from collections import defaultdict
-from contextlib import closing
-from concurrent.futures import ThreadPoolExecutor
 
 from confluent_kafka import KafkaError, TopicPartition
 
@@ -144,7 +142,8 @@ class Recorder(DependencyMount):
                 if prev != curr:
                     return callback(prev, curr)
 
-            results[self.format_session_key(key)] = self.dump_session_data(updated)
+            results[self.format_session_key(key)] = \
+                self.dump_session_data(updated)
 
             update_buckets = set()
 

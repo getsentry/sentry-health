@@ -5,6 +5,7 @@ from aiohttp import web
 
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.operation import CurrentOperation, Operation
+from tervis.exceptions import ApiError
 
 
 def is_valid_proxy(env, ip):

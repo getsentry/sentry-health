@@ -1,5 +1,3 @@
-import time
-
 from tervis.exceptions import BadAuth
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.db import Database, meta

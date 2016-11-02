@@ -1,2 +1,1 @@
-import sqlalchemy as _sa
-from sqlalchemy import *
+from sqlalchemy import *  # noqa: F403,401

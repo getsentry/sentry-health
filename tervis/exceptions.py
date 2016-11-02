@@ -1,5 +1,3 @@
-import json
-
 class ConfigError(ValueError):
     pass
 

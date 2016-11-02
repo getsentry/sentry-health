@@ -1,6 +1,6 @@
 from aiopg.sa import create_engine
 
-from tervis.dependencies import DependencyMount, DependencyDescriptor
+from tervis.dependencies import DependencyDescriptor
 from tervis.db.base import DatabaseBackend
 
 

@@ -1,5 +1,4 @@
 import asyncio
-import inspect
 
 from contextlib import contextmanager
 from threading import RLock
@@ -46,7 +45,7 @@ class ManagedResourceBox(object):
             return
         if hasattr(self.res, '__aenter__'):
             self.obj = await self.res.__aenter__()
-        elif hasttr(self.res, '__enter__'):
+        elif hasattr(self.res, '__enter__'):
             self.obj = self.res.__enter__()
         else:
             raise AssertionError('Found uninitialized object that cannot '
@@ -56,7 +55,7 @@ class ManagedResourceBox(object):
         if self.should_deinit:
             if hasattr(self.res, '__aexit__'):
                 await self.res.__aexit__(*exc_info)
-            elif hasttr(self.res, '__exit__'):
+            elif hasattr(self.res, '__exit__'):
                 self.res.__exit__(*exc_info)
 
 
@@ -257,9 +256,10 @@ def resolve_or_ensure_dependency(descr, owner, box_init=False):
 
         scope_obj = info.find_scope(descr.scope)
         if scope_obj is None:
-            raise RuntimeError('Could not find scope "%s" from %r to resolve %r'
-                               % (descr.scope, owner.__class__.__name__,
-                                  descr.__class__.__name__))
+            raise RuntimeError('Could not find scope "%s" from %r to '
+                               'resolve %r' %
+                               (descr.scope, owner.__class__.__name__,
+                                descr.__class__.__name__))
 
         res = obj = descr.instanciate(scope_obj.ref)
         if res is None:

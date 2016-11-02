@@ -1,11 +1,9 @@
 import time
 import json
-import threading
 import logging
 import asyncio
 import functools
 
-from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 
 from tervis.connectors import KafkaProducer
@@ -74,7 +72,7 @@ class ProducerImpl(DependencyMount):
             json.dumps([project, event]).encode('utf-8'),
             key=str(project).encode('utf-8'))
 
-        def produce():
+        def produce(timestamp=timestamp):
             try:
                 produce()
             except BufferError as e:

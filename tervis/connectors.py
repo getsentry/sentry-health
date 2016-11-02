@@ -24,6 +24,7 @@ class KafkaConsumer(DependencyDescriptor):
         rv = Consumer(env.get_consumer_config())
         if self.topics is None:
             return rv
+
         def _handle_assignment(consumer, partitions):
             consumer_logger.debug(
                 'Received assignments: %r',
