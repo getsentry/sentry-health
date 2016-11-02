@@ -66,6 +66,11 @@ class ProjectOptionsManager(DependencyMount):
         return value
 
     async def set_unsafe(self, name, value, project_id=None):
+        """This is calle set_unsafe because the data written here can be
+        incomaptible with production sentry.  The reason for this is that
+        we run this on python 3 and the pickle format is not entirely
+        compatible with python 2.  This exists primarily for test support.
+        """
         key = (project_id, name)
 
         if project_id is None:
