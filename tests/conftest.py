@@ -45,17 +45,34 @@ def ensure_schema(request, metadata, conn):
     request.addfinalizer(lambda: loop.run_until_complete(drop()))
 
 
-def get_db(request, config, metadata, op):
-    class Container(DependencyMount):
-        db = Database(config=config)
-        def __init__(self):
-            DependencyMount.__init__(self, parent=op)
+def get_db(request, target_config, op):
+    from tervis.auth import metadata as auth_metadata
+    from tervis.projectoptions import metadata as projectoptions_metadata
 
-    container = Container()
-    container.__enter__()
-    ensure_schema(request, metadata, container.db.conn)
-    request.addfinalizer(lambda: container.__exit__(None, None, None))
-    return container.db
+    all_databases = {
+        'apiserver.auth_db': [auth_metadata],
+        'apiserver.project_db': [projectoptions_metadata],
+    }
+
+    if target_config not in all_databases:
+        raise RuntimeError('Unknown db %r' % target_config)
+
+    rv = None
+    for config, metadatas in all_databases.items():
+        class Container(DependencyMount):
+            db = Database(config=config)
+            def __init__(self):
+                DependencyMount.__init__(self, parent=op)
+
+        container = Container()
+        container.__enter__()
+        for metadata in metadatas:
+            ensure_schema(request, metadata, container.db.conn)
+        request.addfinalizer(lambda: container.__exit__(None, None, None))
+        if config == target_config:
+            rv = container.db
+
+    return rv
 
 
 @pytest.fixture(scope='module')
@@ -90,8 +107,12 @@ def op(request, env):
 
 @pytest.fixture(scope='function')
 def auth_db(request, op):
-    from tervis.auth import metadata
-    return get_db(request, 'apiserver.auth_db', metadata, op)
+    return get_db(request, 'apiserver.auth_db', op)
+
+
+@pytest.fixture(scope='function')
+def project_db(request, op):
+    return get_db(request, 'apiserver.project_db', op)
 
 
 @pytest.fixture(scope='module')

@@ -1,5 +1,4 @@
 import json
-from ipaddress import ip_address, ip_network
 
 from tervis.environment import CurrentEnvironment
 from tervis.event import normalize_event
@@ -9,25 +8,7 @@ from tervis.producer import Producer
 from tervis.exceptions import ApiError, PayloadTooLarge, ClientReadFailed, \
     ClientBlacklisted
 from tervis.web import Endpoint, ApiResponse, get_remote_addr
-
-
-def ip_is_blacklisted(env, addr):
-    addr = ip_address(addr)
-    for net in env.get_config('apiserver.whitelisted_ips'):
-        try:
-            net = ip_network(net, strict=False)
-        except ValueError:
-            continue
-        if addr in net:
-            return False
-    for net in env.get_config('apiserver.blacklisted_ips'):
-        try:
-            net = ip_network(net, strict=False)
-        except ValueError:
-            continue
-        if addr in net:
-            return True
-    return False
+from tervis.filter import Filter
 
 
 @register_endpoint(
@@ -38,6 +19,7 @@ class SubmitEventEndpoint(Endpoint):
     env = CurrentEnvironment()
     auth = Auth()
     producer = Producer()
+    filter = Filter()
 
     async def accept_event(self):
         max_json_packet = self.env.get_config(
@@ -60,7 +42,7 @@ class SubmitEventEndpoint(Endpoint):
     async def handle(self):
         remote_addr = get_remote_addr(self.env, self.op.req)
         if remote_addr is not None \
-           and ip_is_blacklisted(self.env, remote_addr):
+           and await self.filter.ip_is_blacklisted(remote_addr):
             raise ClientBlacklisted('The ip address of the client is '
                                     'blacklisted for event submission')
 

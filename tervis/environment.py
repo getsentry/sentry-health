@@ -14,6 +14,7 @@ CONFIG_DEFAULTS = {
             'max_json_packet': 1024 * 64,
         },
         'auth_db': 'default',
+        'project_db': 'default',
         'blacklisted_ips': [],
         'whitelisted_ips': [],
         'proxies': [],
