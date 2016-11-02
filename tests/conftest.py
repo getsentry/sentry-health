@@ -1,5 +1,13 @@
+import os
+import sys
+import yaml
+import signal
+import socket
+import aiohttp
+import tempfile
 import asyncio
 import pytest
+from urllib.parse import urljoin
 
 from tervis.environment import Environment
 from tervis.dependencies import DependencyMount
@@ -50,7 +58,7 @@ def get_db(request, config, metadata, op):
     return container.db
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='module')
 def env_factory():
     def factory():
         return Environment(config={
@@ -63,7 +71,7 @@ def env_factory():
     return factory
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='module')
 def env(request, env_factory):
     env = env_factory()
     env.__enter__()
@@ -92,3 +100,54 @@ def runasync():
     def runner(f):
         return asyncio.get_event_loop().run_until_complete(f())
     return runner
+
+
+@pytest.fixture(scope='module')
+def server(env, request):
+    server_pid = None
+
+    loop = asyncio.get_event_loop()
+
+    session_mgr = aiohttp.ClientSession()
+    session = loop.run_until_complete(session_mgr.__aenter__())
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('127.0.0.1', 0))
+    sock.set_inheritable(True)
+    sock.listen(128)
+    print(sock.fileno())
+    port = sock.getsockname()[1]
+
+    @request.addfinalizer
+    def cleanup():
+        if server_pid is not None:
+            os.kill(server_pid, signal.SIGKILL)
+        loop.run_until_complete(session_mgr.__aexit__(None, None, None))
+        sock.close()
+
+    # Spawn the server in a child.  Reasons.
+    server_pid = os.fork()
+    if server_pid == 0:
+        # Shit fucks up on fork
+        loop.close()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        from tervis.apiserver import Server
+        with Server(env) as server:
+            server.run(sock=sock)
+        os._exit(0)
+
+    class ServerInfo(object):
+
+        def __init__(self):
+            self.port = port
+            self.session = session
+
+        def request(self, method, path, **kwargs):
+            return self.session.request(
+                method, urljoin('http://127.0.0.1:%s/' % self.port, path),
+                **kwargs)
+
+    return ServerInfo()

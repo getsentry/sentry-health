@@ -60,10 +60,15 @@ def shell(env):
 @cli.command()
 @click.option('--host')
 @click.option('--port', type=int)
+@click.option('--fd', type=int)
 @pass_environment
-def apiserver(env, host, port):
+def apiserver(env, host, port, fd):
     """Runs the api server."""
     from tervis.apiserver import Server
     with env:
         with Server(env) as server:
-            server.run(host=host, port=port)
+            server.run(host=host, port=port, fd=fd)
+
+
+if __name__ == '__main__':
+    cli()

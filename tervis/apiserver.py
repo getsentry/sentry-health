@@ -1,8 +1,14 @@
+import asyncio
+import socket
+import logging
 from aiohttp import web
 
 from tervis.producer import Producer
 from tervis.environment import CurrentEnvironment
 from tervis.dependencies import DependencyMount
+
+
+logger = logging.getLogger(__name__)
 
 
 class Server(DependencyMount):
@@ -22,18 +28,37 @@ class Server(DependencyMount):
         self.max_json_packet = env.get_config(
             'apiserver.limits.max_json_packet')
 
-    def run(self, host=None, port=None):
-        if host is None:
-            host = self.env.get_config('apiserver.host')
-        if port is None:
-            port = self.env.get_config('apiserver.port')
+    def run(self, host=None, port=None, fd=None, sock=None, backlog=128):
+        loop = asyncio.get_event_loop()
+
+        if sock is not None or fd is not None:
+            if sock is not None:
+                fd = None
+            else:
+                sock = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
+            host = None
+            port = None
+        else:
+            sock = None
+            if host is None:
+                host = self.env.get_config('apiserver.host')
+            if port is None:
+                port = self.env.get_config('apiserver.port')
+
         with self.producer:
-            # We need to make sure that the run_app method does not
-            # terminate the event loop when it closes down.  This would be
-            # an issue for our cleanup logic.
-            self.app.loop.close = lambda: None
+            handler = self.app.make_handler(access_log=logger)
+            server = loop.create_server(handler, host=host, port=port,
+                                        backlog=backlog, sock=sock)
+            srv, startup_res = loop.run_until_complete(
+                asyncio.gather(server, self.app.startup(), loop=loop))
             try:
-                web.run_app(self.app, host=host, port=port,
-                            print=lambda *a, **kw: None)
+                loop.run_forever()
+            except KeyboardInterrupt:
+                pass
             finally:
-                del self.app.loop.close
+                srv.close()
+                loop.run_until_complete(srv.wait_closed())
+                loop.run_until_complete(app.shutdown())
+                loop.run_until_complete(
+                    handler.finish_connections(shutdown_timeout))
+                loop.run_until_complete(app.cleanup())
