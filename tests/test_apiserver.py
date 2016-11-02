@@ -47,10 +47,6 @@ def test_project_blacklists(dsn, server, runasync, projectoptions):
     }, project_id=42)
 
     path = '/events/%s' % dsn['project_id']
-    headers = {
-        'X-Sentry-Auth': dsn['auth'],
-        'X-Forwarded-For': '192.168.0.1, 127.0.0.1',
-    }
 
     ev = {
         'ty': 'basic',
@@ -61,7 +57,19 @@ def test_project_blacklists(dsn, server, runasync, projectoptions):
 
     @runasync
     async def run():
+        headers = {
+            'X-Sentry-Auth': dsn['auth'],
+            'X-Forwarded-For': '192.168.0.1, 127.0.0.1',
+        }
         data = json.dumps(ev)
         async with server.request('POST', path, headers=headers,
                                   data=data) as resp:
             assert resp.status == 403
+
+        headers = {
+            'X-Sentry-Auth': dsn['auth'],
+            'X-Forwarded-For': '192.168.0.2, 127.0.0.1',
+        }
+        async with server.request('POST', path, headers=headers,
+                                  data=data) as resp:
+            assert resp.status == 200
