@@ -13,6 +13,7 @@ from tervis.environment import Environment
 from tervis.dependencies import DependencyMount
 from tervis.projectoptions import ProjectOptions
 from tervis.db import Database
+from tervis.auth import dsns, DSN_ACTIVE
 
 
 def dump_schema(metadata):
@@ -198,3 +199,23 @@ def projectoptions(request, op, runasync):
     request.addfinalizer(lambda: helper.__exit__(None, None, None))
 
     return Options()
+
+
+@pytest.fixture(scope='function')
+def dsn(runasync, auth_db):
+    @runasync
+    async def dsn():
+        await auth_db.conn.execute(dsns.insert(values={
+            'project_id': 42,
+            'public_key': 'a' * 20,
+            'status': DSN_ACTIVE,
+            'roles': 1,
+        }))
+        rv = await auth_db.conn.execute(dsns.select())
+        return dict(await rv.fetchone())
+
+    dsn['auth'] = (
+        'Sentry sentry_key=%s, sentry_timestamp=23, '
+        'sentry_client=foo/1.0' % dsn['public_key']
+    )
+    return dsn

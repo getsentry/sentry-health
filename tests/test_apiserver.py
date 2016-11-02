@@ -12,27 +12,10 @@ def test_server_basics(server, runasync):
             assert data == {'ok': True}
 
 
-def test_event_ingestion(auth_db, server, runasync):
-    @runasync
-    async def dsn():
-        await auth_db.conn.execute(dsns.insert(values={
-            'project_id': 42,
-            'public_key': 'a' * 20,
-            'status': DSN_ACTIVE,
-            'roles': 1,
-        }))
-        rv = await auth_db.conn.execute(dsns.select())
-        rows = await rv.fetchall()
-        assert len(rows) == 1
-        return rows[0]
-
-    auth = (
-        'Sentry sentry_key=%s, sentry_timestamp=23, '
-        'sentry_client=foo/1.0' % dsn['public_key']
-    )
+def test_event_ingestion(dsn, server, runasync):
     path = '/events/%s' % dsn['project_id']
     headers = {
-        'X-Sentry-Auth': auth,
+        'X-Sentry-Auth': dsn['auth'],
     }
 
     ev1 = {
@@ -58,31 +41,14 @@ def test_event_ingestion(auth_db, server, runasync):
             assert data['events'] == 2
 
 
-def test_project_blacklists(auth_db, server, runasync, projectoptions):
+def test_project_blacklists(dsn, server, runasync, projectoptions):
     projectoptions.update({
         'sentry:blacklisted_ips': ['192.168.0.1'],
     }, project_id=42)
 
-    @runasync
-    async def dsn():
-        await auth_db.conn.execute(dsns.insert(values={
-            'project_id': 42,
-            'public_key': 'a' * 20,
-            'status': DSN_ACTIVE,
-            'roles': 1,
-        }))
-        rv = await auth_db.conn.execute(dsns.select())
-        rows = await rv.fetchall()
-        assert len(rows) == 1
-        return rows[0]
-
-    auth = (
-        'Sentry sentry_key=%s, sentry_timestamp=23, '
-        'sentry_client=foo/1.0' % dsn['public_key']
-    )
     path = '/events/%s' % dsn['project_id']
     headers = {
-        'X-Sentry-Auth': auth,
+        'X-Sentry-Auth': dsn['auth'],
         'X-Forwarded-For': '192.168.0.1, 127.0.0.1',
     }
 
