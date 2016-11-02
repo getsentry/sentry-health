@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 
 from tervis.environment import Environment
 from tervis.dependencies import DependencyMount
+from tervis.projectoptions import ProjectOptions
 from tervis.db import Database
 
 
@@ -79,6 +80,9 @@ def get_db(request, target_config, op):
 def env_factory():
     def factory():
         return Environment(config={
+            'apiserver': {
+                'proxies': ['127.0.0.1'],
+            },
             'databases': {
                 'default': {
                     'database': 'sentry_health_test',
@@ -172,3 +176,25 @@ def server(env, request):
                 **kwargs)
 
     return ServerInfo()
+
+
+@pytest.fixture(scope='function')
+def projectoptions(request, op, runasync):
+    class Helper(DependencyMount):
+        options = ProjectOptions()
+        def __init__(self):
+            DependencyMount.__init__(self, parent=op)
+
+    helper = Helper()
+    helper.__enter__()
+
+    class Options(object):
+        def update(self, options, project_id):
+            @runasync
+            async def run():
+                for key, value in options.items():
+                    await helper.options.set_unsafe(key, value, project_id)
+
+    request.addfinalizer(lambda: helper.__exit__(None, None, None))
+
+    return Options()

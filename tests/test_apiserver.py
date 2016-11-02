@@ -12,7 +12,11 @@ def test_server_basics(server, runasync):
             assert data == {'ok': True}
 
 
-def test_event_ingestion(auth_db, server, runasync):
+def test_event_ingestion(auth_db, server, runasync, projectoptions):
+    projectoptions.update({
+        'sentry:blacklisted_ips': [],
+    }, project_id=42)
+
     @runasync
     async def dsn():
         await auth_db.conn.execute(dsns.insert(values={
