@@ -4,6 +4,10 @@ language: python
 services:
   - postgresql
 
+cache:
+  directories:
+    - $HOME/.cache/pip/wheels
+
 python:
   - "3.5"
 
