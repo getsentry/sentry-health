@@ -6,9 +6,9 @@ python:
 
 install:
   - git clone --depth 1 --branch "0.9.1" https://github.com/edenhill/librdkafka
-  - cd librdkafka && ./configure && make && make install
+  - cd librdkafka && ./configure --prefix=`pwd` && make && make install
   - pip install flake8
-  - pip install --editable .
+  - LDFLAGS=-L`pwd`/lib CFLAGS=-I`pwd`/include pip install --editable .
 
 script:
   - make lint test
