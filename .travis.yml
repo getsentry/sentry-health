@@ -5,7 +5,7 @@ python:
   - "3.5"
 
 install:
-  - git clone --depth 1 --branch "$LIBRDKAFKA_VERSION" https://github.com/edenhill/librdkafka.git
+  - git clone --depth 1 --branch "0.9.1" https://github.com/edenhill/librdkafka
   - cd librdkafka && ./configure && make && make install
   - pip install flake8
   - pip install --editable .
