@@ -37,6 +37,19 @@ def ensure_schema(request, metadata, conn):
     request.addfinalizer(lambda: loop.run_until_complete(drop()))
 
 
+def get_db(request, config, metadata, op):
+    class Container(DependencyMount):
+        db = Database(config=config)
+        def __init__(self):
+            DependencyMount.__init__(self, parent=op)
+
+    container = Container()
+    container.__enter__()
+    ensure_schema(request, metadata, container.db.conn)
+    request.addfinalizer(lambda: container.__exit__(None, None, None))
+    return container.db
+
+
 @pytest.fixture(scope='function')
 def env_factory():
     def factory():
@@ -69,15 +82,8 @@ def op(request, env):
 
 @pytest.fixture(scope='function')
 def auth_db(request, op):
-    class Container(DependencyMount):
-        db = Database(config='apiserver.auth_db')
-        def __init__(self):
-            DependencyMount.__init__(self, parent=op)
-
-    with Container() as container:
-        from tervis.auth import metadata
-        ensure_schema(request, metadata, container.db.conn)
-        yield container.db
+    from tervis.auth import metadata
+    return get_db(request, 'apiserver.auth_db', metadata, op)
 
 
 @pytest.fixture(scope='module')
