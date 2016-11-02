@@ -12,11 +12,7 @@ def test_server_basics(server, runasync):
             assert data == {'ok': True}
 
 
-def test_event_ingestion(auth_db, server, runasync, projectoptions):
-    projectoptions.update({
-        'sentry:blacklisted_ips': [],
-    }, project_id=42)
-
+def test_event_ingestion(auth_db, server, runasync):
     @runasync
     async def dsn():
         await auth_db.conn.execute(dsns.insert(values={
@@ -60,3 +56,46 @@ def test_event_ingestion(auth_db, server, runasync, projectoptions):
             data = json.loads(await resp.text())
             assert data['errors'] == []
             assert data['events'] == 2
+
+
+def test_project_blacklists(auth_db, server, runasync, projectoptions):
+    projectoptions.update({
+        'sentry:blacklisted_ips': ['192.168.0.1'],
+    }, project_id=42)
+
+    @runasync
+    async def dsn():
+        await auth_db.conn.execute(dsns.insert(values={
+            'project_id': 42,
+            'public_key': 'a' * 20,
+            'status': DSN_ACTIVE,
+            'roles': 1,
+        }))
+        rv = await auth_db.conn.execute(dsns.select())
+        rows = await rv.fetchall()
+        assert len(rows) == 1
+        return rows[0]
+
+    auth = (
+        'Sentry sentry_key=%s, sentry_timestamp=23, '
+        'sentry_client=foo/1.0' % dsn['public_key']
+    )
+    path = '/events/%s' % dsn['project_id']
+    headers = {
+        'X-Sentry-Auth': auth,
+        'X-Forwarded-For': '192.168.0.1, 127.0.0.1',
+    }
+
+    ev = {
+        'ty': 'basic',
+        'ts': 42.0,
+        'oid': 13,
+        'sid': 13,
+    }
+
+    @runasync
+    async def run():
+        data = json.dumps(ev)
+        async with server.request('POST', path, headers=headers,
+                                  data=data) as resp:
+            assert resp.status == 403
