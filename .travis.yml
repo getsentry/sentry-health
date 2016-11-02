@@ -6,7 +6,7 @@ python:
 
 install:
   - git clone --depth 1 --branch "0.9.1" https://github.com/edenhill/librdkafka
-  - (cd librdkafka && ./configure --prefix=`pwd`/.local && make && make install)
+  - (cd librdkafka && ./configure --prefix=`pwd`/../.local && make && make install)
   - pip install flake8
   - LDFLAGS=-L`pwd`/.local/lib CFLAGS=-I`pwd`/.local/include pip install --editable .
 
