@@ -40,12 +40,14 @@ class SubmitEventEndpoint(Endpoint):
     producer = Producer()
 
     async def accept_event(self):
+        max_json_packet = self.env.get_config(
+            'apiserver.limits.max_json_packet')
         line = await self.op.req.content.readline()
         if not line:
             return
         try:
             line = line.decode('utf-8')
-            if len(line) > self.max_json_packet:
+            if len(line) > max_json_packet:
                 raise PayloadTooLarge('JSON event above maximum size')
             return normalize_event(json.loads(line))
         except IOError as e:

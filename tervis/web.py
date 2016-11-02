@@ -22,13 +22,13 @@ def get_remote_addr(env, req):
     except LookupError:
         ip_trail = []
 
-    if len(ip_trial) >= 2:
-        if all(is_valid_proxy(env, ip) for ip in ip_trial[1:]):
+    if len(ip_trail) >= 2:
+        if all(is_valid_proxy(env, ip) for ip in ip_trail[1:]):
             return ip_trail[0]
 
-    family = self.transport.get_extra_info('socket').family
+    family = req.transport.get_extra_info('socket').family
     if family in (socket.AF_INET, socket.AF_INET6):
-        return self.transport.get_extra_info('peername')[0]
+        return req.transport.get_extra_info('peername')[0]
 
 
 class ApiResponse(object):
