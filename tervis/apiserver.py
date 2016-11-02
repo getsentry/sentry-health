@@ -18,6 +18,7 @@ class Server(DependencyMount):
     def __init__(self, env):
         DependencyMount.__init__(self, parent=env)
         self.app = web.Application()
+        self.shutdown_timeout = env.get_config('apiserver.shutdown_timeout')
 
         from tervis.api import endpoint_registry
         for name, opts in endpoint_registry.items():
@@ -55,7 +56,7 @@ class Server(DependencyMount):
             finally:
                 srv.close()
                 loop.run_until_complete(srv.wait_closed())
-                loop.run_until_complete(app.shutdown())
+                loop.run_until_complete(self.app.shutdown())
                 loop.run_until_complete(
-                    handler.finish_connections(shutdown_timeout))
-                loop.run_until_complete(app.cleanup())
+                    handler.finish_connections(self.shutdown_timeout))
+                loop.run_until_complete(self.app.cleanup())
