@@ -25,9 +25,6 @@ class Server(DependencyMount):
             opts['handler'] = opts.pop('endpoint').as_handler(env)
             self.app.router.add_route(**opts)
 
-        self.max_json_packet = env.get_config(
-            'apiserver.limits.max_json_packet')
-
     def run(self, host=None, port=None, fd=None, sock=None, backlog=128):
         loop = asyncio.get_event_loop()
 
