@@ -30,4 +30,7 @@ test:
 	@psql -c "create database sentry_health_test" > /dev/null
 	py.test --tb=short tests -vv
 
-.PHONY: up upd down build recorder generator shell
+lint:
+	@flake8
+
+.PHONY: up upd down build recorder generator shell test lint
