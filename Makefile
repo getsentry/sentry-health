@@ -31,6 +31,6 @@ test:
 	py.test --tb=short tests -vv
 
 lint:
-	@flake8
+	@flake8 tervis
 
 .PHONY: up upd down build recorder generator shell test lint
