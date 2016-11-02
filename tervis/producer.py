@@ -8,7 +8,6 @@ import functools
 from contextlib import contextmanager
 from concurrent.futures import ThreadPoolExecutor
 
-from tervis._compat import text_type
 from tervis.connectors import KafkaProducer
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.environment import CurrentEnvironment
@@ -73,7 +72,7 @@ class ProducerImpl(DependencyMount):
         produce = functools.partial(
             self.producer.produce, 'events',
             json.dumps([project, event]).encode('utf-8'),
-            key=text_type(project).encode('utf-8'))
+            key=str(project).encode('utf-8'))
 
         def produce():
             try:

@@ -1,8 +1,6 @@
 import sys
 import pkgutil
 
-from tervis._compat import iteritems
-
 
 def merge(*objs):
     """Recursively merges objects together."""
@@ -13,7 +11,7 @@ def merge(*objs):
             return a
         else:
             a = dict(a)
-        for key, value in iteritems(b):
+        for key, value in b.items():
             if isinstance(value, dict):
                 value = _merge(a.get(key) or {}, value)
             a[key] = value

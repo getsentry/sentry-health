@@ -1,13 +1,9 @@
 import json
 
-from tervis._compat import implements_to_string
-
-
 class ConfigError(ValueError):
     pass
 
 
-@implements_to_string
 class ApiError(Exception):
     status_code = 400
 

@@ -1,7 +1,6 @@
 import os
 import yaml
 
-from tervis._compat import text_type
 from tervis.utils import merge, iter_segments
 from tervis.dependencies import DependencyMount, DependencyDescriptor
 
@@ -78,7 +77,7 @@ class Environment(DependencyMount):
             if not isinstance(rv, dict):
                 raise exceptions.ConfigError(
                     '%r is not not a dictionary' %
-                    '.'.join(map(text_type, seg)))
+                    '.'.join(map(str, seg)))
             if rv is None:
                 rv = {}
             rv = rv.get(seg)
