@@ -34,10 +34,6 @@ class SubmitEventEndpoint(Endpoint):
         except IOError as e:
             raise ClientReadFailed(str(e))
 
-    async def process_event(self, event):
-        self.producer.produce_event(self.auth.project_id, event,
-                                    self.auth.timestamp)
-
     async def post(self):
         remote_addr = get_remote_addr(self.env, self.op.req)
         if remote_addr is not None \
@@ -52,7 +48,8 @@ class SubmitEventEndpoint(Endpoint):
                 event = await self.accept_event()
                 if event is None:
                     break
-                await self.process_event(event)
+                await self.producer.produce_event(
+                    self.auth.project_id, event, self.auth.timestamp)
                 events += 1
             except ApiError as e:
                 errors.append(e.to_json())

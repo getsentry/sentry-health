@@ -72,7 +72,7 @@ class ProducerImpl(DependencyMount):
             json.dumps([project, event]).encode('utf-8'),
             key=str(project).encode('utf-8'))
 
-        def produce(timestamp=timestamp):
+        def run(timestamp=timestamp):
             try:
                 produce()
             except BufferError as e:
@@ -94,4 +94,4 @@ class ProducerImpl(DependencyMount):
                 logger.info('%s events produced, current timestamp is %s.',
                             i, timestamp)
 
-        return await submit(produce)
+        return await submit(run)
