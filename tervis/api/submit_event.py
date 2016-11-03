@@ -43,7 +43,7 @@ class SubmitEventEndpoint(Endpoint):
 
         errors = []
         events = 0
-        while 1:
+        while True:
             try:
                 event = await self.accept_event()
                 if event is None:
