@@ -140,7 +140,6 @@ def server(env, request):
     sock.bind(('127.0.0.1', 0))
     sock.set_inheritable(True)
     sock.listen(128)
-    print(sock.fileno())
     port = sock.getsockname()[1]
 
     @request.addfinalizer
