@@ -2,6 +2,9 @@ import sys
 import pkgutil
 
 
+_missing = object()
+
+
 def merge(*objs):
     """Recursively merges objects together."""
     def _merge(a, b):

@@ -8,6 +8,9 @@ from tervis.operation import CurrentOperation, Operation
 from tervis.exceptions import ApiError
 
 
+HTTP_METHODS = ['GET', 'POST', 'HEAD', 'OPTIONS', 'PUT', 'PATCH']
+
+
 def is_valid_proxy(env, ip):
     for proxy_ip in env.get_config('apiserver.proxies'):
         proxy_ip = ip_address(proxy_ip)
@@ -51,6 +54,23 @@ class CurrentEndpoint(DependencyDescriptor):
     pass
 
 
+def get_endpoints():
+    """Returns the list of all known endpoints."""
+    seen = set()
+    rv = set()
+    to_walk = Endpoint.__subclasses__()
+
+    while to_walk:
+        cls = to_walk.pop()
+        if cls in seen:
+            continue
+        seen.add(cls)
+        if cls.__name__[:1] != '_':
+            rv.add(cls)
+
+    return list(rv)
+
+
 class Endpoint(DependencyMount):
     op = CurrentOperation()
 
@@ -60,8 +80,25 @@ class Endpoint(DependencyMount):
             descriptor_type=CurrentEndpoint
         )
 
+    @property
+    def url_path(self):
+        raise NotImplementedError('Need to implement url_path')
+
     @classmethod
-    def as_handler(cls, env):
+    def get_methods(cls):
+        rv = set()
+        for method in HTTP_METHODS:
+            func = getattr(cls, method.lower())
+            if getattr(func, 'method_not_implemented', False):
+                continue
+            rv.add(method)
+        if 'GET' in rv:
+            rv.add('HEAD')
+        return sorted(rv)
+
+    @classmethod
+    def method_as_handler(cls, method, env):
+        method_name = method.lower()
         async def handler(req):
             try:
                 project_id = req.match_info.get('project_id')
@@ -72,13 +109,44 @@ class Endpoint(DependencyMount):
                         raise ApiError('Invalid project ID')
                 async with Operation(env, req, project_id) as op:
                     async with cls(op) as self:
-                        return (await self.handle()).to_http_response()
+                        meth = getattr(self, method_name)
+                        return (await meth()).to_http_response()
             except exceptions.ApiError as e:
                 return e.get_response().to_http_response()
         return handler
 
-    async def handle(self):
-        raise NotImplementedError('This endpoint cannot handle')
+    @classmethod
+    def register_with_app(self, app, env):
+        for method in self.get_methods():
+            app.router.add_route(
+                handler=self.method_as_handler(method, env),
+                path=self.url_path,
+                method=method,
+                name='%s:%s' % (self.__name__, method)
+            )
+
+    async def get(self):
+        raise NotImplementedError('This endpoint cannot handle GET requests')
+    get.method_not_implemented = True
+
+    async def post(self):
+        raise NotImplementedError('This endpoint cannot handle POST requests')
+    post.method_not_implemented = True
+
+    async def head(self):
+        pass
+    head.method_not_implemented = True
+
+    async def options(self):
+        pass
+
+    async def put(self):
+        pass
+    put.method_not_implemented = True
+
+    async def patch(self):
+        pass
+    patch.method_not_implemented = True
 
 
 from tervis import exceptions

@@ -6,6 +6,7 @@ from aiohttp import web
 from tervis.producer import Producer
 from tervis.environment import CurrentEnvironment
 from tervis.dependencies import DependencyMount
+from tervis.web import get_endpoints
 
 
 logger = logging.getLogger(__name__)
@@ -20,11 +21,8 @@ class Server(DependencyMount):
         self.app = web.Application()
         self.shutdown_timeout = env.get_config('apiserver.shutdown_timeout')
 
-        from tervis.api import endpoint_registry
-        for name, opts in endpoint_registry.items():
-            opts = dict(opts)
-            opts['handler'] = opts.pop('endpoint').as_handler(env)
-            self.app.router.add_route(**opts)
+        for endpoint_cls in get_endpoints():
+            endpoint_cls.register_with_app(self.app, env)
 
     def run(self, host=None, port=None, fd=None, sock=None, backlog=128):
         loop = asyncio.get_event_loop()

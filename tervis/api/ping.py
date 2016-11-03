@@ -1,12 +1,8 @@
 from tervis.web import Endpoint, ApiResponse
-from tervis.api import register_endpoint
 
 
-@register_endpoint(
-    method='Get',
-    path='/ping',
-)
 class PingEndpoint(Endpoint):
+    url_path = '/ping'
 
-    async def handle(self):
+    async def get(self):
         return ApiResponse({'ok': True})
