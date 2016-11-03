@@ -226,7 +226,6 @@ class Endpoint(DependencyMount):
 
     @classmethod
     def register_with_server(self, server):
-        env = server.env
         for method in self.get_methods():
             server.app.router.add_route(
                 handler=self.method_as_handler(server, method),

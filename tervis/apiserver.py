@@ -24,7 +24,7 @@ class Server(DependencyMount):
         for endpoint_cls in get_endpoints():
             endpoint_cls.register_with_server(self)
 
-    async def add_cors_headers(self, req, endpoint=None):
+    async def add_cors_headers(self, req, resp, endpoint=None):
         origin = req.headers.get('ORIGIN')
         if not origin:
             return
@@ -48,11 +48,11 @@ class Server(DependencyMount):
                 methods.append('HEAD')
 
         resp.headers['Access-Control-Allow-Origin'] = origin
-        reps.headers['Access-Control-Allow-Methods'] = ', '.join(methods)
+        resp.headers['Access-Control-Allow-Methods'] = ', '.join(methods)
 
     async def postprocess_response(self, req, resp, endpoint=None):
         if 'origin' not in resp.headers:
-            await self.add_cors_headers(req, endpoint)
+            await self.add_cors_headers(req, resp, endpoint)
         return resp
 
     async def make_response(self, req, rv, endpoint=None):
