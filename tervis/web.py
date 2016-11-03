@@ -97,8 +97,10 @@ class Endpoint(DependencyMount):
         return sorted(rv)
 
     @classmethod
-    def method_as_handler(cls, method, env):
+    def method_as_handler(cls, server, method):
+        env = server.env
         method_name = method.lower()
+
         async def handler(req):
             try:
                 project_id = req.match_info.get('project_id')
@@ -110,16 +112,24 @@ class Endpoint(DependencyMount):
                 async with Operation(env, req, project_id) as op:
                     async with cls(op) as self:
                         meth = getattr(self, method_name)
-                        return (await meth()).to_http_response()
+                        try:
+                            rv = (await meth())
+                        except exceptions.ApiError as e:
+                            return await server.make_response(
+                                e.get_response(), self)
+                        else:
+                            return await server.make_response(rv, self)
             except exceptions.ApiError as e:
-                return e.get_response().to_http_response()
+                return await server.make_response(e.get_response())
+
         return handler
 
     @classmethod
-    def register_with_app(self, app, env):
+    def register_with_server(self, server):
+        env = server.env
         for method in self.get_methods():
-            app.router.add_route(
-                handler=self.method_as_handler(method, env),
+            server.app.router.add_route(
+                handler=self.method_as_handler(server, method),
                 path=self.url_path,
                 method=method,
                 name='%s:%s' % (self.__name__, method)

@@ -6,7 +6,7 @@ from aiohttp import web
 from tervis.producer import Producer
 from tervis.environment import CurrentEnvironment
 from tervis.dependencies import DependencyMount
-from tervis.web import get_endpoints
+from tervis.web import get_endpoints, ApiResponse
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,19 @@ class Server(DependencyMount):
         self.shutdown_timeout = env.get_config('apiserver.shutdown_timeout')
 
         for endpoint_cls in get_endpoints():
-            endpoint_cls.register_with_app(self.app, env)
+            endpoint_cls.register_with_server(self)
+
+    async def postprocess_response(self, resp, endpoint=None):
+        return resp
+
+    async def make_response(self, rv, endpoint=None):
+        if isinstance(rv, dict):
+            rv = ApiResponse(rv)
+        elif isinstance(rv, tuple):
+            rv = ApiResponse(*rv)
+        if isinstance(rv, ApiResponse):
+            rv = rv.to_http_response()
+        return await self.postprocess_response(rv, endpoint)
 
     def run(self, host=None, port=None, fd=None, sock=None, backlog=128):
         loop = asyncio.get_event_loop()
