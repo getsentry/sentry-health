@@ -6,7 +6,7 @@ from aiohttp import web
 from tervis.producer import Producer
 from tervis.environment import CurrentEnvironment
 from tervis.dependencies import DependencyMount
-from tervis.web import get_endpoints, ApiResponse
+from tervis.web import get_endpoints, ApiResponse, is_allowed_origin
 
 
 logger = logging.getLogger(__name__)
@@ -24,17 +24,45 @@ class Server(DependencyMount):
         for endpoint_cls in get_endpoints():
             endpoint_cls.register_with_server(self)
 
-    async def postprocess_response(self, resp, endpoint=None):
+    async def add_cors_headers(self, req, endpoint=None):
+        origin = req.headers.get('ORIGIN')
+        if not origin:
+            return
+
+        allowed_origins = set(self.env.get_config('apiserver.allowed_origins'))
+        if endpoint is not None:
+            if not endpoint.allow_cors:
+                return
+            allowed_origins.update(await endpoint.get_allowed_origins())
+
+        if not is_allowed_origin(origin, allowed_origins):
+            return
+
+        if endpoint is not None:
+            methods = endpoint.get_methods()
+        else:
+            methods = ['OPTIONS']
+            if req.method not in methods:
+                methods.append(req.method)
+            if 'GET' in methods and 'HEAD' not in methods:
+                methods.append('HEAD')
+
+        resp.headers['Access-Control-Allow-Origin'] = origin
+        reps.headers['Access-Control-Allow-Methods'] = ', '.join(methods)
+
+    async def postprocess_response(self, req, resp, endpoint=None):
+        if 'origin' not in resp.headers:
+            await self.add_cors_headers(req, endpoint)
         return resp
 
-    async def make_response(self, rv, endpoint=None):
+    async def make_response(self, req, rv, endpoint=None):
         if isinstance(rv, dict):
             rv = ApiResponse(rv)
         elif isinstance(rv, tuple):
             rv = ApiResponse(*rv)
         if isinstance(rv, ApiResponse):
             rv = rv.to_http_response()
-        return await self.postprocess_response(rv, endpoint)
+        return await self.postprocess_response(req, rv, endpoint)
 
     def run(self, host=None, port=None, fd=None, sock=None, backlog=128):
         loop = asyncio.get_event_loop()

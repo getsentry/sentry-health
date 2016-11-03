@@ -17,6 +17,9 @@ class SubmitEventEndpoint(Endpoint):
     producer = Producer()
     filter = Filter()
 
+    async def get_allowed_origins(self):
+        return await self.filter.get_allowed_origins()
+
     async def accept_event(self):
         max_json_packet = self.env.get_config(
             'apiserver.limits.max_json_packet')

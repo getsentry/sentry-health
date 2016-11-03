@@ -55,3 +55,7 @@ class FilterManager(DependencyMount):
         if await self._ip_is_project_blacklisted(addr, project_id):
             return True
         return False
+
+    async def get_allowed_origins(self, project_id=None):
+        return await self.project_options.get('sentry:origins',
+                                              project_id=project_id) or []

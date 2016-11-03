@@ -18,7 +18,7 @@ CONFIG_DEFAULTS = {
         'blacklisted_ips': [],
         'whitelisted_ips': [],
         'proxies': [],
-        'api_origins': [],
+        'allowed_origins': [],
     },
     'recorder': {
         'ttl': 60 * 60 * 24 * 7,
