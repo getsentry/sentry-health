@@ -86,7 +86,15 @@ class Server(DependencyMount):
                 port = self.env.get_config('apiserver.port')
 
         with self.producer:
-            handler = self.app.make_handler(access_log=logger)
+            handler = self.app.make_handler(
+                access_log=logger,
+                slow_request_timeout=self.env.get_config(
+                    'apiserver.slow_request_timeout'),
+                keepalive_timeout=self.env.get_config(
+                    'apiserver.keepalive_timeout'),
+                tcp_keepalive=self.env.get_config(
+                    'apiserver.tcp_keepalive')
+            )
             server = loop.create_server(handler, host=host, port=port,
                                         backlog=backlog, sock=sock)
             srv, startup_res = loop.run_until_complete(

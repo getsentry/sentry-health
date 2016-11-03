@@ -10,6 +10,9 @@ CONFIG_DEFAULTS = {
         'port': 8000,
         'host': '0.0.0.0',
         'shutdown_timeout': 60.0,
+        'slow_request_timeout': 120.0,
+        'keepalive_timeout': 75.0,
+        'tcp_keepalive': True,
         'limits': {
             'max_json_packet': 1024 * 64,
         },
