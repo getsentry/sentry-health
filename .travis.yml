@@ -12,7 +12,7 @@ python:
   - "3.5"
 
 install:
-  - LIBRDKAFKA_VERSION 0.9.1 (cd /tmp && wget https://github.com/edenhill/librdkafka/archive/${LIBRDKAFKA_VERSION}.tar.gz && tar -xzf ./${LIBRDKAFKA_VERSION}.tar.gz && cd librdkafka-${LIBRDKAFKA_VERSION} && ./configure --prefix=$HOME/.local && make && make install)
+  - LIBRDKAFKA_VERSION=0.9.1 (cd /tmp && wget https://github.com/edenhill/librdkafka/archive/${LIBRDKAFKA_VERSION}.tar.gz && tar -xzf ./${LIBRDKAFKA_VERSION}.tar.gz && cd librdkafka-${LIBRDKAFKA_VERSION} && ./configure --prefix=$HOME/.local && make && make install)
   - pip install flake8
   - LDFLAGS=-L$HOME/.local/lib CFLAGS=-I$HOME/.local/include pip install --editable .
 
