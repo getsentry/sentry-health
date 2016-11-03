@@ -12,10 +12,9 @@ python:
   - "3.5"
 
 install:
-  - git clone --depth 1 --branch "0.9.1" https://github.com/edenhill/librdkafka
-  - (cd librdkafka && ./configure --prefix=`pwd`/../.local && make && make install)
+  - LIBRDKAFKA_VERSION 0.9.1 (cd /tmp && wget https://github.com/edenhill/librdkafka/archive/${LIBRDKAFKA_VERSION}.tar.gz && tar -xzf ./${LIBRDKAFKA_VERSION}.tar.gz && cd librdkafka-${LIBRDKAFKA_VERSION} && ./configure --prefix=$HOME/.local && make && make install)
   - pip install flake8
-  - LDFLAGS=-L`pwd`/.local/lib CFLAGS=-I`pwd`/.local/include pip install --editable .
+  - LDFLAGS=-L$HOME/.local/lib CFLAGS=-I$HOME/.local/include pip install --editable .
 
 before_script:
   - psql -c 'create database sentry_health_test' -U postgres
