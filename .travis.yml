@@ -11,10 +11,15 @@ cache:
 python:
   - "3.5"
 
+env:
+  - LDFLAGS=-L$HOME/.local/lib
+  - CFLAGS=-I$HOME/.local/include
+  - LD_LIBRARY_PATH=$HOME/.local/lib
+
 install:
   - (cd /tmp && wget https://github.com/edenhill/librdkafka/archive/0.9.1.tar.gz && tar -xzf ./0.9.1.tar.gz && cd librdkafka-0.9.1 && ./configure --prefix=$HOME/.local && make && make install)
   - pip install flake8
-  - LDFLAGS=-L$HOME/.local/lib CFLAGS=-I$HOME/.local/include pip install --editable .
+  - pip install --editable .
 
 before_script:
   - psql -c 'create database sentry_health_test' -U postgres
