@@ -47,7 +47,8 @@ def ensure_schema(request, metadata, conn):
     request.addfinalizer(lambda: loop.run_until_complete(drop()))
 
 
-def get_db(request, target_config, op):
+@pytest.fixture(scope='function')
+def databases(request, op):
     from tervis.auth import metadata as auth_metadata
     from tervis.projectoptions import metadata as projectoptions_metadata
 
@@ -56,10 +57,7 @@ def get_db(request, target_config, op):
         'apiserver.project_db': [projectoptions_metadata],
     }
 
-    if target_config not in all_databases:
-        raise RuntimeError('Unknown db %r' % target_config)
-
-    rv = None
+    rv = {}
     for config, metadatas in all_databases.items():
         class Container(DependencyMount):
             db = Database(config=config)
@@ -71,8 +69,7 @@ def get_db(request, target_config, op):
         for metadata in metadatas:
             ensure_schema(request, metadata, container.db.conn)
         request.addfinalizer(lambda: container.__exit__(None, None, None))
-        if config == target_config:
-            rv = container.db
+        rv[config] = container.db
 
     return rv
 
@@ -83,6 +80,7 @@ def env_factory():
         return Environment(config={
             'apiserver': {
                 'proxies': ['127.0.0.1'],
+                'allowed_origins': ['https://example.com'],
             },
             'databases': {
                 'default': {
@@ -111,13 +109,13 @@ def op(request, env):
 
 
 @pytest.fixture(scope='function')
-def auth_db(request, op):
-    return get_db(request, 'apiserver.auth_db', op)
+def auth_db(databases):
+    return databases['apiserver.auth_db']
 
 
 @pytest.fixture(scope='function')
-def project_db(request, op):
-    return get_db(request, 'apiserver.project_db', op)
+def project_db(databases):
+    return databases['apiserver.project_db']
 
 
 @pytest.fixture(scope='module')
@@ -180,7 +178,7 @@ def server(env, request):
 
 
 @pytest.fixture(scope='function')
-def projectoptions(request, op, runasync):
+def projectoptions(request, op, project_db, runasync):
     class Helper(DependencyMount):
         options = ProjectOptions()
         def __init__(self):

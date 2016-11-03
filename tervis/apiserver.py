@@ -27,16 +27,17 @@ class Server(DependencyMount):
     async def add_cors_headers(self, req, resp, endpoint=None):
         origin = req.headers.get('ORIGIN')
         if not origin:
-            return
+            return resp
 
         allowed_origins = set(self.env.get_config('apiserver.allowed_origins'))
         if endpoint is not None:
             if not endpoint.allow_cors:
-                return
+                return resp
             allowed_origins.update(await endpoint.get_allowed_origins())
 
         if not is_allowed_origin(origin, allowed_origins):
-            return
+            return exceptions.Forbidden('Origin is not allowed') \
+                .get_response().to_http_response()
 
         if endpoint is not None:
             methods = endpoint.get_methods()
@@ -48,11 +49,14 @@ class Server(DependencyMount):
                 methods.append('HEAD')
 
         resp.headers['Access-Control-Allow-Origin'] = origin
-        resp.headers['Access-Control-Allow-Methods'] = ', '.join(methods)
+        resp.headers['Access-Control-Allow-Methods'] = \
+            ', '.join(sorted(methods))
+
+        return resp
 
     async def postprocess_response(self, req, resp, endpoint=None):
         if 'origin' not in resp.headers:
-            await self.add_cors_headers(req, resp, endpoint)
+            resp = await self.add_cors_headers(req, resp, endpoint)
         return resp
 
     async def make_response(self, req, rv, endpoint=None):
@@ -98,3 +102,6 @@ class Server(DependencyMount):
                 loop.run_until_complete(
                     handler.finish_connections(self.shutdown_timeout))
                 loop.run_until_complete(self.app.cleanup())
+
+
+from tervis import exceptions

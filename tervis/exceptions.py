@@ -26,6 +26,10 @@ class BadAuth(ApiError):
     status_code = 403
 
 
+class Forbidden(ApiError):
+    status_code = 403
+
+
 class ClientBlacklisted(ApiError):
     status_code = 403
 

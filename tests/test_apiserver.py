@@ -73,3 +73,58 @@ def test_project_blacklists(dsn, server, runasync, projectoptions):
         async with server.request('POST', path, headers=headers,
                                   data=data) as resp:
             assert resp.status == 200
+
+
+def test_project_origin(projectoptions, dsn, runasync, server):
+    projectoptions.update({
+        'sentry:origins': ['https://myproject.invalid'],
+    }, project_id=42)
+
+    path = '/events/%s' % dsn['project_id']
+    ev = {
+        'ty': 'basic',
+        'ts': 42.0,
+        'oid': 13,
+        'sid': 13,
+    }
+
+    @runasync
+    async def run_good():
+        headers = {
+            'X-Sentry-Auth': dsn['auth'],
+            'Origin': 'https://myproject.invalid'
+        }
+        data = json.dumps(ev)
+        async with server.request('POST', path, headers=headers,
+                                  data=data) as resp:
+            assert resp.status == 200
+            assert resp.headers['Access-Control-Allow-Origin'] \
+                == 'https://myproject.invalid'
+            assert resp.headers['Access-Control-Allow-Methods'] \
+                == 'OPTIONS, POST'
+
+    @runasync
+    async def run_global_good():
+        headers = {
+            'X-Sentry-Auth': dsn['auth'],
+            'Origin': 'https://example.com'
+        }
+        data = json.dumps(ev)
+        async with server.request('POST', path, headers=headers,
+                                  data=data) as resp:
+            assert resp.status == 200
+            assert resp.headers['Access-Control-Allow-Origin'] \
+                == 'https://example.com'
+            assert resp.headers['Access-Control-Allow-Methods'] \
+                == 'OPTIONS, POST'
+
+    @runasync
+    async def run_bad():
+        headers = {
+            'X-Sentry-Auth': dsn['auth'],
+            'Origin': 'https://unknown.invalid'
+        }
+        data = json.dumps(ev)
+        async with server.request('POST', path, headers=headers,
+                                  data=data) as resp:
+            assert resp.status == 403
