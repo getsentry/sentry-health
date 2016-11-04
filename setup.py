@@ -1,4 +1,19 @@
+import os
 from setuptools import setup, find_packages
+
+
+dependencies = [
+    'click~=6.6',
+    'PyYAML~=3.12',
+    'confluent-kafka~=0.9',
+    'redis~=2.10',
+    'aiohttp~=1.0.3',
+    'SQLAlchemy~=1.1.3',
+    'aiopg~=0.12.0',
+]
+
+is os.environ.get('TERVIS_SKIP_LIBTERVIS_DEP') != '1':
+    dependencies.append('libtervis~=0.1.0')
 
 
 setup(
@@ -12,16 +27,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     platforms='any',
-    install_requires=[
-        'click~=6.6',
-        'PyYAML~=3.12',
-        'confluent-kafka~=0.9',
-        'redis~=2.10',
-        'aiohttp~=1.0.3',
-        'SQLAlchemy~=1.1.3',
-        'aiopg~=0.12.0',
-        'libtervis~=0.1.0',
-    ],
+    install_requires=dependencies,
     entry_points={
         'console_scripts': [
             'tervis = tervis.cli:cli',
