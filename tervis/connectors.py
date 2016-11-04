@@ -1,9 +1,10 @@
 import logging
 
-from confluent_kafka import Consumer, Producer
+from confluent_kafka import Consumer
 
 from redis import StrictRedis
 
+from libtervis.utils import merge
 from tervis.dependencies import DependencyDescriptor
 
 
@@ -21,7 +22,9 @@ class KafkaConsumer(DependencyDescriptor):
         return tuple(self.topics or ())
 
     def instanciate(self, env):
-        rv = Consumer(env.get_consumer_config())
+        config = merge(env.get_config('kafka.common'),
+                       env.get_config('kafka.consumer'))
+        rv = Consumer(config)
         if self.topics is None:
             return rv
 
@@ -32,13 +35,6 @@ class KafkaConsumer(DependencyDescriptor):
             )
         rv.subscribe(self.topics, on_assign=_handle_assignment)
         return rv
-
-
-class KafkaProducer(DependencyDescriptor):
-    scope = 'env'
-
-    def instanciate(self, env):
-        return Producer(env.get_producer_config())
 
 
 class Redis(DependencyDescriptor):

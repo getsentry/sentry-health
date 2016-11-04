@@ -1,7 +1,8 @@
 import os
 import yaml
 
-from tervis.utils import merge, iter_segments
+from tervis.utils import iter_segments
+from libtervis.utils import merge
 from tervis.dependencies import DependencyMount, DependencyDescriptor
 
 
@@ -92,14 +93,6 @@ class Environment(DependencyMount):
                 rv = {}
             rv = rv.get(seg)
         return rv
-
-    def get_consumer_config(self):
-        return merge(self.get_config('kafka.common'),
-                     self.get_config('kafka.consumer'))
-
-    def get_producer_config(self):
-        return merge(self.get_config('kafka.common'),
-                     self.get_config('kafka.producer'))
 
 
 from tervis import exceptions

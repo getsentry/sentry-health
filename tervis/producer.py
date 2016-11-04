@@ -5,8 +5,8 @@ import asyncio
 import functools
 
 from concurrent.futures import ThreadPoolExecutor
+from libtervis.producer import make_producer
 
-from tervis.connectors import KafkaProducer
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.environment import CurrentEnvironment
 
@@ -44,12 +44,12 @@ class _FastFlush(object):
 
 
 class ProducerImpl(DependencyMount):
-    producer = KafkaProducer()
     env = CurrentEnvironment()
 
     def __init__(self, env):
         DependencyMount.__init__(self, parent=env)
         self.event_count = 0
+        self.producer = make_producer(env.get_config('kafka'))
 
     async def close_async(self):
         await self.flush()

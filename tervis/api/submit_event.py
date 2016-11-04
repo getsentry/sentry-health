@@ -1,13 +1,15 @@
 import json
 
 from tervis.environment import CurrentEnvironment
-from tervis.event import normalize_event
 from tervis.auth import Auth
 from tervis.producer import Producer
 from tervis.exceptions import ApiError, PayloadTooLarge, ClientReadFailed, \
     ClientBlacklisted
 from tervis.web import Endpoint, ApiResponse, get_remote_addr
 from tervis.filter import Filter
+
+from libtervis.event import normalize_event
+from libtervis.exceptions import ValidationError
 
 
 class SubmitEventEndpoint(Endpoint):
@@ -33,6 +35,8 @@ class SubmitEventEndpoint(Endpoint):
             return normalize_event(json.loads(line))
         except IOError as e:
             raise ClientReadFailed(str(e))
+        except ValidationError as e:
+            raise ApiError(e.message)
 
     async def post(self):
         remote_addr = get_remote_addr(self.env, self.op.req)

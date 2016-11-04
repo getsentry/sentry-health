@@ -20,6 +20,7 @@ setup(
         'aiohttp~=1.0.3',
         'SQLAlchemy~=1.1.3',
         'aiopg~=0.12.0',
+        'libtervis~=0.1.0',
     ],
     entry_points={
         'console_scripts': [
