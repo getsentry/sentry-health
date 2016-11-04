@@ -29,13 +29,17 @@ CONFIG_DEFAULTS = {
         'batch_size': 1000,
     },
     'kafka': {
+        'producer': {},
+        'common': {
+            'bootstrap.servers': 'kafka',
+        },
         'consumer': {
             'group.id': 'tarvis-events',
             'enable.auto.commit': 'false',
             'default.topic.config': {
                 'auto.offset.reset': 'earliest',
             },
-        }
+        },
     },
     'databases': {
         'default': {
