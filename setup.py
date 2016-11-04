@@ -12,7 +12,7 @@ dependencies = [
     'aiopg~=0.12.0',
 ]
 
-is os.environ.get('TERVIS_SKIP_LIBTERVIS_DEP') != '1':
+if os.environ.get('TERVIS_SKIP_LIBTERVIS_DEP') != '1':
     dependencies.append('libtervis~=0.1.0')
 
 
