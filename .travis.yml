@@ -17,6 +17,7 @@ env:
 install:
   - (cd /tmp && wget https://github.com/edenhill/librdkafka/archive/0.9.1.tar.gz && tar -xzf ./0.9.1.tar.gz && cd librdkafka-0.9.1 && ./configure --prefix=$HOME/.local && make && make install)
   - pip install flake8
+  - pip install git+https://github.com/getsentry/sentry-libhealth
   - pip install --editable .
 
 before_script:
