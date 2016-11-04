@@ -1,11 +1,8 @@
-import time
-import json
 import logging
 import asyncio
-import functools
 
 from concurrent.futures import ThreadPoolExecutor
-from libtervis.producer import make_producer
+from libtervis.producer import Producer as SyncProducer
 
 from tervis.dependencies import DependencyDescriptor, DependencyMount
 from tervis.environment import CurrentEnvironment
@@ -48,12 +45,15 @@ class ProducerImpl(DependencyMount):
 
     def __init__(self, env):
         DependencyMount.__init__(self, parent=env)
-        self.event_count = 0
-        self.producer = make_producer(env.get_config('kafka'))
+        self.producer = SyncProducer(env.get_config('kafka'))
 
-    async def close_async(self):
+    async def __aexit__(self, exc_type, exc_value, tb):
         await self.flush()
-        return await DependencyMount.close_async(self)
+        return await DependencyMount.__aexit__(self, exc_type, exc_value, tb)
+
+    @property
+    def event_count(self):
+        return self.producer.event_count
 
     async def flush(self):
         def flush():
@@ -67,31 +67,5 @@ class ProducerImpl(DependencyMount):
         return _FastFlush(self)
 
     async def produce_event(self, project, event, timestamp=None):
-        produce = functools.partial(
-            self.producer.produce, 'events',
-            json.dumps([project, event]).encode('utf-8'),
-            key=str(project).encode('utf-8'))
-
-        def run(timestamp=timestamp):
-            try:
-                produce()
-            except BufferError as e:
-                logger.info(
-                    'Caught %r, waiting for %s events to be produced...',
-                    e,
-                    len(self.producer),
-                )
-                self.producer.flush()  # wait for buffer to empty
-                logger.info('Done waiting, continue to generate events...')
-                produce()
-
-            self.event_count += 1
-
-            i = self.event_count
-            if i % 1000 == 0:
-                if timestamp is None:
-                    timestamp = time.time()
-                logger.info('%s events produced, current timestamp is %s.',
-                            i, timestamp)
-
-        return await submit(run)
+        return await submit(lambda: self.producer.produce_event(
+            project, event, timestamp))
