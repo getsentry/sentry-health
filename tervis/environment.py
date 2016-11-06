@@ -62,7 +62,7 @@ def load_config(filename):
 def discover_config():
     fn = os.environ.get('TERVIS_CONFIG')
     if not fn:
-        raise RuntimeError('TERVIS_CONFIG not exported as envvar')
+        raise exceptions.ConfigError('TERVIS_CONFIG not exported as envvar')
     return load_config(fn)
 
 
