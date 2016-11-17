@@ -1,0 +1,3 @@
+[submodule "libtervis"]
+	path = libtervis
+	url = https://github.com/getsentry/sentry-libhealth
