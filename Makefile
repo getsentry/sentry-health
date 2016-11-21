@@ -13,6 +13,10 @@ down:
 build:
 	docker build -t tervis .
 
+develop:
+	pip install --editable ./libtervis
+	TERVIS_SKIP_LIBTERVIS_DEP=1 pip install --editable .
+
 recorder:
 	docker run $(DOCKER_RUN_OPTS) recorder
 
@@ -37,4 +41,4 @@ test: clean-db test-light
 lint:
 	@flake8 tervis
 
-.PHONY: up upd down build recorder generator shell clean-db test-light test lint
+.PHONY: up upd down build recorder generator shell clean-db test-light test lint develop
